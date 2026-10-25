@@ -164,7 +164,9 @@ MSWin32-x64-multi-thread
 ```
 
 `make bins` builds all supported targets into `Bin/`; `make verify-bins`
-checks them with `file` plus QEMU/Wine. Release CI uses `bundle-all`, so the
+checks them with `file` plus QEMU/Wine. On Debian the cross builds require
+both the `gcc-*-linux-gnu`/MinGW compilers and the matching
+`libc6-dev-*-cross` header packages (the compilers only *recommend* them). Release CI uses `bundle-all`, so the
 package contains every target. macOS (`darwin`) is not supported.
 
 ## Versioning

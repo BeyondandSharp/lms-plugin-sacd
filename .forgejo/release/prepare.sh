@@ -41,11 +41,16 @@ fi
 missing_cross=""
 for cc in aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc arm-linux-gnueabi-gcc i686-linux-gnu-gcc x86_64-w64-mingw32-gcc; do
   command -v "$cc" >/dev/null 2>&1 || missing_cross="$missing_cross $cc"
+  # `gcc-aarch64-linux-gnu` only *recommends* the cross libc headers.  Some
+  # CI images install without recommends, leaving the compiler present but
+  # /usr/<triple>/include/bits missing.
+  printf '#include <stdio.h>\nint main(void){return 0;}\n' | "$cc" -x c -fsyntax-only - >/dev/null 2>&1     || missing_cross="$missing_cross $cc(+libc)"
 done
 if [ -n "$missing_cross" ]; then
-  echo "[prepare] 缺少交叉编译器：$missing_cross；调用 ensure-tools 安装"
-  if ! RELEASE_JOB_PACKAGES="gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi gcc-i686-linux-gnu gcc-mingw-w64-x86-64"        node "$FORGEJO_DIR/scripts/run.mjs" ensure-tools; then
-    echo "[ERROR] 交叉编译器安装失败；请检查 RELEASE_JOB_PACKAGES 与 APT_PROXY" >&2
+  echo "[prepare] 缺少交叉编译器或交叉 libc：$missing_cross；调用 ensure-tools 安装"
+  if ! RELEASE_JOB_PACKAGES="gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi gcc-i686-linux-gnu gcc-mingw-w64-x86-64 libc6-dev-arm64-cross libc6-dev-armhf-cross libc6-dev-armel-cross libc6-dev-i386-cross" \
+       node "$FORGEJO_DIR/scripts/run.mjs" ensure-tools; then
+    echo "[ERROR] 交叉编译器/交叉 libc 安装失败；请检查 RELEASE_JOB_PACKAGES 与 APT_PROXY" >&2
     exit 1
   fi
 fi

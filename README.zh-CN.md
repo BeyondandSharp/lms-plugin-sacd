@@ -163,7 +163,8 @@ MSWin32-x64-multi-thread
 ```
 
 `make bins` 构建全部支持的目标到 `Bin/`；`make verify-bins` 用 `file` 和
-QEMU/Wine 检查。发布 CI 使用 `bundle-all`，因此发布包会包含全部目标。
+QEMU/Wine 检查。Debian 上交叉编译还需要匹配的 `libc6-dev-*-cross`
+头文件包（编译器只把它们列为 Recommends）。发布 CI 使用 `bundle-all`，因此发布包会包含全部目标。
 不支持 macOS（`darwin`）。
 
 ## 版本号管理
