@@ -1,18 +1,19 @@
 <?xml version="1.0"?>
+<!-- Template: rendered to build/install.xml from VERSION by make. -->
 <extension>
   <name>PLUGIN_SACDPLAYER</name>
   <module>Plugins::SACDPlayer::Plugin</module>
   <importmodule>Plugins::SACDPlayer::Plugin</importmodule>
-  <version>0.2.7</version>
+  <version>@VERSION@</version>
   <description>PLUGIN_SACDPLAYER_DESC</description>
   <creator>SACDPlayer contributors</creator>
-  <homepageURL>https://github.com/LMS-Community/plugin-SACDPlayer</homepageURL>
+  <homepageURL>https://github.com/BeyondandSharp/lms-plugin-sacd</homepageURL>
   <defaultState>enabled</defaultState>
   <type>2</type>
   <!-- type=extension -->
   <targetApplication>
     <id>SlimServer</id>
-    <minVersion>9.1.0</minVersion>
+    <minVersion>9.0.0</minVersion>
     <maxVersion>9.*</maxVersion>
   </targetApplication>
 </extension>

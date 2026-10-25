@@ -65,7 +65,7 @@ Changes:
 #ifndef __APPLE__
 #include <malloc.h>
 #endif
-#include <memory.h>
+#include <string.h>
 #include <stdio.h>
 #include "dst_ac.h"
 #include "types.h"

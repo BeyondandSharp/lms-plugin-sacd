@@ -1,9 +1,12 @@
 CC      ?= cc
 CFLAGS  ?= -O2 -Wall -Wextra -std=c11
+VERSION ?= $(shell cat ../../VERSION 2>/dev/null | head -n 1)
 CPPFLAGS ?=
+CPPFLAGS += -DHELPER_VERSION=\"$(VERSION)\"
 LDLIBS  ?= -lm
 
-BIN      := sacd_dsd
+EXE      ?=
+BIN      := sacd_dsd$(EXE)
 SRC      := sacd_dsd.c
 DST_SRC  := $(wildcard libdstdec/*.c)
 
@@ -62,4 +65,4 @@ install: $(BIN)
 	chmod 755 ../../Bin/$(BINARCH)/$(BIN)
 
 clean:
-	rm -f $(BIN)
+	rm -f sacd_dsd sacd_dsd.exe

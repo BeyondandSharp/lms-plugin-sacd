@@ -2,8 +2,8 @@
 # SACDPlayer release preflight hook.
 #
 # The generic `release` Action runs this file (see action-template/release/)
-# with `sh .forgejo/release/preflight.sh`, inside the checkout of the pushed
-# tag, with these variables in the environment:
+# with `sh .forgejo/release/preflight.sh`, inside the checkout of the pushed tag,
+# with these variables in the environment:
 #
 #   RELEASE_VERSION   version without the leading "v" (e.g. 0.2.7)
 #   RELEASE_TAG       tag as pushed (e.g. v0.2.7)
@@ -16,10 +16,10 @@
 # it with RELEASE_PRECHECK_OVERRIDE=pass (or not run it at all with `skip`).
 #
 # Rules checked here:
-#   1. install.xml / Makefile / repo.xml all carry the tag version;
-#   2. HEAD is the commit the tag points at (the Action checked the tag out);
-#   3. repo.xml download URL points at this version (warning only — fix it
-#      before releasing, but it lives outside `.forgejo`).
+#   1. VERSION (the single source of truth) matches the tag version;
+#   2. install.xml.in / repo.xml.in still contain their build placeholders
+#      (the real XML is rendered only by `make bundle`);
+#   3. HEAD is the commit the tag points at (the Action checked the tag out).
 set -eu
 
 cd "${GITHUB_WORKSPACE:-$(pwd)}"
@@ -41,26 +41,27 @@ fi
 echo "[preflight] version=$version tag=$tag"
 
 # --- 1. version consistency -------------------------------------------------
-# A Lyrion plugin is distributed through install.xml (LMS), repo.xml (plugin
-# catalog) and packaged by the Makefile. All three must agree with the tag,
-# otherwise the release would ship mixed metadata.
-install_version=$(sed -n 's:.*<version>[[:space:]]*\([^<]*\)[[:space:]]*</version>.*:\1:p' install.xml | head -n 1)
-makefile_version=$(sed -n 's:^VERSION[[:space:]]*?=[[:space:]]*\([^[:space:]]*\).*:\1:p' Makefile | head -n 1)
-repo_version=$(sed -n 's:.*<plugin[^>]*[[:space:]]version="\([^"]*\)".*:\1:p' repo.xml | head -n 1)
+version_file=$(cat VERSION 2>/dev/null | head -n 1 || true)
+version_file=$(printf '%s' "$version_file" | tr -d '[:space:]')
+if [ "$version_file" = "$version" ]; then
+  ok "VERSION = $version"
+else
+  err "VERSION 是 '${version_file:-<未找到>}'，应把 VERSION 更新为 $version"
+fi
 
-check_version() {
-  file=$1
-  actual=$2
-  if [ "$actual" = "$version" ]; then
-    ok "$file 版本 = $actual"
-  else
-    err "$file 版本是 '${actual:-<未找到>}'，应与 tag 一致（$version）"
-  fi
-}
+# The manifests are templates; no concrete version should be committed.
+if grep -q '<version>@VERSION@</version>' install.xml.in 2>/dev/null; then
+  ok "install.xml.in 使用 @VERSION@ 占位符"
+else
+  err "install.xml.in 缺少 <version>@VERSION@</version> 占位符"
+fi
+if grep -q 'version="@VERSION@"' repo.xml.in 2>/dev/null \
+   && grep -q '<url>@RELEASE_URL@</url>' repo.xml.in 2>/dev/null; then
+  ok "repo.xml.in 使用版本/URL 占位符"
+else
+  err "repo.xml.in 缺少 @VERSION@ 或 @RELEASE_URL@ 占位符"
+fi
 
-check_version install.xml "$install_version"
-check_version Makefile "$makefile_version"
-check_version repo.xml "$repo_version"
 
 # --- 2. HEAD is the tagged commit -------------------------------------------
 head_sha=$(git rev-parse HEAD 2>/dev/null || true)
@@ -71,21 +72,6 @@ elif [ "$head_sha" = "$expected_sha" ]; then
 else
   err "HEAD ($head_sha) 与 tag $tag 指向的提交 ($expected_sha) 不一致"
 fi
-
-# --- 3. repo.xml download URL (warning only) --------------------------------
-# The catalog points at the ZIP we upload; a stale tag here means LMS would
-# download an old (or missing) file. It is a warning, not an error: this URL is
-# fixed outside `.forgejo` and must not block the workflow.
-download_url=$(sed -n 's:.*<url>[[:space:]]*\([^<]*\)[[:space:]]*</url>.*:\1:p' repo.xml | head -n 1)
-case "$download_url" in
-  *"/download/v$version/"*)
-    ok "repo.xml 下载地址指向 v$version"
-    ;;
-  *)
-    warn "repo.xml 下载地址未指向 /download/v$version/：${download_url:-<未找到>}"
-    warn "发布前请把 repo.xml 的 <url> 更新为 .../releases/download/v$version/SACDPlayer-$version.zip"
-    ;;
-esac
 
 # --- summary -----------------------------------------------------------------
 echo

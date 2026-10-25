@@ -17,8 +17,8 @@
 #
 # This hook is optional in general; for this repository it produces the two
 # artifacts the release ships:
-#   dist/SACDPlayer-<version>-<arch>.tar.gz   (installable folder)
-#   dist/SACDPlayer-<version>.zip             (what repo.xml downloads)
+#   dist/SACDPlayer-<version>-all.tar.gz       (installable folder, all binaries)
+#   dist/SACDPlayer-<version>.zip              (what repo.xml downloads)
 set -eu
 
 : "${GITHUB_WORKSPACE:?prepare.sh: GITHUB_WORKSPACE 未设置（本 hook 需由 release Action 运行）}"
@@ -36,20 +36,31 @@ if ! command -v make >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[prepare] make bundle VERSION=$version"
-make bundle VERSION="$version"
-
-# `make bundle` writes dist/SACDPlayer-<version>-<uname -m>.tar.gz; the arch
-# suffix depends on the runner, so glob instead of hard-coding x86_64-linux.
-tarball=""
-for candidate in dist/SACDPlayer-"$version"-*.tar.gz; do
-  if [ -f "$candidate" ]; then
-    tarball=$candidate
-    break
-  fi
+# `bundle-all` needs the Debian cross toolchains.  The generic Action's
+# ensure-tools helper honours APT_PROXY/mirrors; do not call apt-get directly.
+missing_cross=""
+for cc in aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc arm-linux-gnueabi-gcc i686-linux-gnu-gcc x86_64-w64-mingw32-gcc; do
+  command -v "$cc" >/dev/null 2>&1 || missing_cross="$missing_cross $cc"
 done
-if [ -z "$tarball" ]; then
-  echo "[ERROR] make bundle 没有产出 dist/SACDPlayer-$version-<arch>.tar.gz" >&2
+if [ -n "$missing_cross" ]; then
+  echo "[prepare] 缺少交叉编译器：$missing_cross；调用 ensure-tools 安装"
+  if ! RELEASE_JOB_PACKAGES="gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi gcc-i686-linux-gnu gcc-mingw-w64-x86-64"        node "$FORGEJO_DIR/scripts/run.mjs" ensure-tools; then
+    echo "[ERROR] 交叉编译器安装失败；请检查 RELEASE_JOB_PACKAGES 与 APT_PROXY" >&2
+    exit 1
+  fi
+fi
+
+case "${RELEASE_TAG:-v$version}" in
+  v*) tag_prefix=v ;;
+  *)  tag_prefix= ;;
+esac
+
+echo "[prepare] make bundle-all VERSION=$version RELEASE_TAG_PREFIX=$tag_prefix"
+make bundle-all VERSION="$version" RELEASE_TAG_PREFIX="$tag_prefix"
+
+tarball="dist/SACDPlayer-$version-all.tar.gz"
+if [ ! -f "$tarball" ]; then
+  echo "[ERROR] make bundle-all 没有产出 $tarball" >&2
   exit 1
 fi
 

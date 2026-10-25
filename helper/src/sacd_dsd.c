@@ -23,6 +23,17 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#ifndef fseeko
+#define fseeko _fseeki64
+#endif
+#ifndef ftello
+#define ftello _ftelli64
+#endif
+#endif
+
 #ifdef HAVE_LIBDSTDEC
 #include "libdstdec/dst_init.h"
 #include "libdstdec/dst_fram.h"
@@ -37,6 +48,10 @@
 #endif
 
 #define DSD_SILENCE 0x69
+
+#ifndef HELPER_VERSION
+#define HELPER_VERSION "dev"
+#endif
 
 typedef struct {
     const char *input;
@@ -919,12 +934,17 @@ int main(int argc, char **argv) {
         }
     }
 
+#ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN);
+#endif
+#if defined(_WIN32)
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     setvbuf(stdout, NULL, _IONBF, 0);
 
     if (o.selftest) return selftest();
     if (o.probe) {
-        printf("version=0.2.7\n");
+        printf("version=%s\n", HELPER_VERSION);
         printf("native=1\n");
         printf("dop=1\n");
 #if defined(HAVE_LIBDSTDEC)

@@ -1,16 +1,27 @@
 # Helper binaries
 
-A release folder produced by `make dist` already contains the native helper
-under `Bin/<arch>-linux/sacd_dsd`; the LMS host needs no compiler.
+Release packages contain static helpers for the supported platforms:
 
-For a source checkout, build and install it with:
-
-```sh
-make -C ../helper/src
-make -C ../helper/src install
+```text
+Bin/x86_64-linux/sacd_dsd
+Bin/aarch64-linux/sacd_dsd
+Bin/armhf-linux/sacd_dsd
+Bin/arm-linux/sacd_dsd
+Bin/i386-linux/sacd_dsd
+Bin/MSWin32-x64-multi-thread/sacd_dsd.exe
 ```
 
-`make install` places `sacd_dsd` in `Bin/<arch>-linux/`. Prebuilt binaries are
-not required for PCM/FLAC playback (FFmpeg is used), but native DSD/DoP need
-the helper. Release builds statically link the helper, including the vendored
-libdstdec decoder; no libav runtime library is required.
+The LMS host needs no compiler. The plugin manager adds the matching
+`Bin/<arch>` directory to `PATH`; `sacd_dsd` includes the vendored libdstdec
+decoder and needs no libav runtime.
+
+For a source checkout:
+
+```sh
+make bins          # build all supported architectures into Bin/
+make -C helper/src # build only the host architecture
+make verify-bins   # file/readelf sanity + QEMU/Wine --probe
+```
+
+`make dist` includes every binary already present under `Bin/`;
+`make dist-all` builds all supported architectures first.

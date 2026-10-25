@@ -1,6 +1,8 @@
 # SACDPlayer for Lyrion Music Server
 
-`SACDPlayer` adds SACD-oriented DSF/DFF support to LMS 9.1+ (tested with 9.1.1):
+[中文说明](README.zh-CN.md)
+
+`SACDPlayer` adds SACD-oriented DSF/DFF support to LMS 9.0+ (tested with 9.0.0 and 9.1.1):
 
 - scans `.dsf` and `.dff` (including DST-compressed DSDIFF),
 - reads tags/cover art from headers only, never by decoding the whole file,
@@ -14,20 +16,22 @@ DST header parsing and a bounded tag reader.
 
 ## Requirements
 
-- Lyrion Music Server **9.1+** (latest stable tested: 9.1.1).
+- Lyrion Music Server **9.0+** (tested: 9.0.0 and 9.1.1).
 - **FFmpeg 7.1+** for the PCM/FLAC path (the `ffmpeg` executable is enough).
   The official `lmscommunity/lyrionmusicserver` image does **not** include
   ffmpeg; PCM mode therefore needs ffmpeg installed, while native DFF/DoP DST
   works with the bundled helper alone.
-- `Audio::Scan >= 0.94` (shipped with LMS 9.1).
+- `Audio::Scan >= 0.94` (shipped with LMS 9.0+).
 - For native DSD/DoP: build the small `sacd_dsd` helper in `helper/src`.
 - DST native/DoP uses the vendored **libdstdec** decoder, so it does **not**
   require a special FFmpeg build. libdstdec handles SACD DST (DSD64).
 
 ## Install
 
-1. Copy this directory to `Plugins/SACDPlayer` under the LMS installation
-   (or use the plugin repository ZIP).
+1. Use the packaged `dist/SACDPlayer` folder (or the release ZIP/tarball) and
+   copy it to `Plugins/SACDPlayer` under the LMS installation. The source tree
+   contains `install.xml.in` only; it is not directly installable before
+   `make dist`.
 2. Build the helper:
    ```sh
    sudo apt-get install build-essential
@@ -54,7 +58,7 @@ absolute path.
 
 DoP is *not* the same as native DSD: it is DSD data carried in 24-bit PCM
 samples with the DoP marker bytes. The helper wraps it in a WAV container so
-LMS/players see the correct DSD/16 sample rate even on LMS 9.1, which has no
+LMS/players see the correct DSD/16 sample rate even on LMS 9.0/9.1, which have no
 per-stream sample-rate hook.
 
 ## Tag reading
@@ -110,8 +114,9 @@ dist/SACDPlayer/
 ├── lib/                 # plugin Perl modules
 ├── HTML/                # settings pages
 ├── strings.txt
-├── Bin/x86_64-linux/sacd_dsd   # static helper binary
+├── Bin/x86_64-linux/sacd_dsd   # plus aarch64/armhf/arm/i386/Windows
 ├── README.md
+├── README.zh-CN.md
 ├── THIRD_PARTY_NOTICES.md
 └── LICENSE
 ```
@@ -141,7 +146,49 @@ default `make dist` helper is statically linked and contains the vendored
 libdstdec decoder, so `dst_native=1` for SACD DSD64 DST.
 
 `make install PLUGINS_DIR=/path/to/lms/Plugins` copies the same folder directly.
-`make bundle` additionally creates `dist/SACDPlayer-<version>-<arch>.tar.gz`.
+`make bundle` creates a host-architecture archive; `make bundle-all` builds
+all supported Linux architectures and creates `dist/SACDPlayer-<version>-all.tar.gz`.
+
+### Supported helper architectures
+
+```text
+x86_64-linux
+aarch64-linux
+armhf-linux
+arm-linux
+i386-linux
+MSWin32-x64-multi-thread
+```
+
+`make bins` builds all supported targets into `Bin/`; `make verify-bins`
+checks them with `file` plus QEMU/Wine. Release CI uses `bundle-all`, so the
+package contains every target. macOS (`darwin`) is not supported.
+
+## Versioning
+
+`VERSION` is the single source of truth. The tracked files
+`install.xml.in` and `repo.xml.in` contain only `@VERSION@` / `@RELEASE_URL@`
+placeholders; the real XML is generated into `build/` for a release and is not
+committed.
+
+To bump everything at once:
+
+```sh
+make bump VERSION=0.3.0
+```
+
+`make dist` / `make bundle` render `build/install.xml` and `build/repo.xml`
+from `VERSION`; the helper's `--probe` version is compiled from the same value.
+CI passes the tag version as `VERSION=...`. The release URL base and tag prefix
+are configurable with `RELEASE_BASE=...` and `RELEASE_TAG_PREFIX=...`
+(defaults: this project's Forgejo and `v`).
+
+To generate only the plugin-catalog file:
+
+```sh
+make repo
+# -> build/repo.xml
+```
 
 ## Development
 

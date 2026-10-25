@@ -4,9 +4,11 @@
 helper/src/build/
 helper/src/sacd_dsd
 Bin/*/sacd_dsd
+Bin/*/sacd_dsd.exe
 t/fixtures/
 t/tmp/
 *.log
 
 dist/
 /test
+/build/
