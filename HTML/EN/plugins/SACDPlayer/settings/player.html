@@ -1,0 +1,48 @@
+[% PROCESS settings/header.html %]
+
+[% WRAPPER settingSection %]
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_OUTPUT" desc="PLUGIN_SACDPLAYER_OUTPUT_DESC" %]
+    <select class="stdedit" name="pref_output_mode">
+      <option value="pcm"[% IF prefs.output_mode == 'pcm' %] selected[% END %]>[% "PLUGIN_SACDPLAYER_PCM" | string %]</option>
+      <option value="dop"[% IF prefs.output_mode == 'dop' %] selected[% END %][% UNLESS capabilities.dop %] disabled[% END %]>[% "PLUGIN_SACDPLAYER_DOP" | string %]</option>
+      <option value="native"[% IF prefs.output_mode == 'native' %] selected[% END %][% UNLESS capabilities.native %] disabled[% END %]>[% "PLUGIN_SACDPLAYER_NATIVE" | string %]</option>
+    </select>
+    <div class="prefDesc">
+      [% IF capabilities.native %][% "PLUGIN_SACDPLAYER_NATIVE_OK" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NATIVE_UNAVAILABLE" | string %][% END %]
+      [% IF capabilities.dop %][% "PLUGIN_SACDPLAYER_DOP_OK" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_DOP_UNAVAILABLE" | string %][% END %]
+    </div>
+  [% END %]
+
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_PCM" desc="PLUGIN_SACDPLAYER_PCM_DESC" %]
+    <select class="stdedit" name="pref_pcm_rate">
+      [% FOREACH opt IN [ ['auto','PLUGIN_SACDPLAYER_AUTO'], ['352800','352.8 kHz'], ['176400','176.4 kHz'], ['88200','88.2 kHz'], ['44100','44.1 kHz'] ] %]
+        <option value="[% opt.0 %]"[% IF prefs.pcm_rate == opt.0 %] selected[% END %]>[% opt.1 | string %]</option>
+      [% END %]
+    </select>
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_FLAC_COMP" | string %]</div>
+    <select class="stdedit" name="pref_flac_compression">
+      [% FOREACH v IN [0,5,8] %]<option value="[% v %]"[% IF prefs.flac_compression == v %] selected[% END %]>[% v %]</option>[% END %]
+    </select>
+  [% END %]
+
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_DOP" desc="PLUGIN_SACDPLAYER_DOP_DESC" %]
+    <select class="stdedit" name="pref_dop_max_fs">
+      [% FOREACH opt IN [ [64,'DSD64'], [128,'DSD128'], [256,'DSD256'] ] %]
+        <option value="[% opt.0 %]"[% IF prefs.dop_max_fs == opt.0 %] selected[% END %]>[% opt.1 %]</option>
+      [% END %]
+    </select>
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_RESAMPLER" | string %]</div>
+    <select class="stdedit" name="pref_resampler">
+      [% FOREACH opt IN [ ['auto','auto'], ['soxr','soxr'], ['swr','swr'] ] %]
+        <option value="[% opt.0 %]"[% IF prefs.resampler == opt.0 %] selected[% END %]>[% opt.1 %]</option>
+      [% END %]
+    </select>
+  [% END %]
+
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_STATUS" desc="" %]
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_FORMATS" | string %]: [% capabilities.formats | html %] / max [% capabilities.max_rate %] Hz</div>
+    <div class="prefDesc">DST native: [% IF capabilities.dst %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</div>
+  [% END %]
+[% END %]
+
+[% PROCESS settings/footer.html %]

@@ -1,0 +1,9 @@
+*.o
+*.so
+*.dylib
+helper/src/build/
+helper/src/sacd_dsd
+Bin/*/sacd_dsd
+t/fixtures/
+t/tmp/
+*.log

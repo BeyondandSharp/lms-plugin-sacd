@@ -1,0 +1,131 @@
+PLUGIN_SACDPLAYER
+	EN	SACD Player
+	ZH	SACD 播放器
+
+PLUGIN_SACDPLAYER_DESC
+	EN	DSF/DFF (including DST) playback with PCM, DoP and native DSD output
+	ZH	支持 DSF/DFF（含 DST）播放，可输出 PCM、DoP 或原生 DSD
+
+PLUGIN_SACDPLAYER_SETTINGS
+	EN	SACD Player
+	ZH	SACD 播放器
+
+PLUGIN_SACDPLAYER_SETTINGS_DESC
+	EN	Decoder, tag reader and output settings for SACD files.
+	ZH	SACD 文件的解码、标签读取和输出设置。
+
+PLUGIN_SACDPLAYER_STATUS
+	EN	Status
+	ZH	状态
+
+PLUGIN_SACDPLAYER_MISSING
+	EN	not found
+	ZH	未找到
+
+PLUGIN_SACDPLAYER_YES
+	EN	yes
+	ZH	是
+
+PLUGIN_SACDPLAYER_NO
+	EN	no
+	ZH	否
+
+PLUGIN_SACDPLAYER_PATHS
+	EN	Tool paths
+	ZH	工具路径
+
+PLUGIN_SACDPLAYER_PATHS_DESC
+	EN	Leave empty to use the system PATH / plugin Bin directory.
+	ZH	留空则使用系统 PATH 或插件 Bin 目录。
+
+PLUGIN_SACDPLAYER_FFMPEG
+	EN	ffmpeg executable
+	ZH	ffmpeg 可执行文件
+
+PLUGIN_SACDPLAYER_FFPROBE
+	EN	ffprobe executable (tag fallback)
+	ZH	ffprobe 可执行文件（标签后备）
+
+PLUGIN_SACDPLAYER_HELPER
+	EN	sacd_dsd helper executable
+	ZH	sacd_dsd 辅助程序
+
+PLUGIN_SACDPLAYER_TAGS
+	EN	Tag reading
+	ZH	标签读取
+
+PLUGIN_SACDPLAYER_TAGS_DESC
+	EN	Tags are read from the file header and ID3/DIIN chunks only.
+	ZH	仅从文件头和 ID3/DIIN 块读取标签。
+
+PLUGIN_SACDPLAYER_TAG_FALLBACK
+	EN	Fallback when header parsing fails
+	ZH	头部解析失败时的后备方案
+
+PLUGIN_SACDPLAYER_AUTO
+	EN	auto
+	ZH	自动
+
+PLUGIN_SACDPLAYER_OFF
+	EN	off
+	ZH	关闭
+
+PLUGIN_SACDPLAYER_MAX_TAG
+	EN	Maximum tag/cover size (MB)
+	ZH	标签/封面最大读取大小（MB）
+
+PLUGIN_SACDPLAYER_OUTPUT
+	EN	Output mode
+	ZH	输出模式
+
+PLUGIN_SACDPLAYER_OUTPUT_DESC
+	EN	PCM (FLAC) is the compatibility default. DoP and native DSD require a capable player/DAC.
+	ZH	PCM (FLAC) 为兼容默认；DoP 和原生 DSD 需要播放器/DAC 支持。
+
+PLUGIN_SACDPLAYER_PCM
+	EN	PCM (FLAC)
+	ZH	PCM（FLAC）
+
+PLUGIN_SACDPLAYER_DOP
+	EN	DoP (DSD over PCM)
+	ZH	DoP（DSD over PCM）
+
+PLUGIN_SACDPLAYER_NATIVE
+	EN	Native DSD
+	ZH	原生 DSD
+
+PLUGIN_SACDPLAYER_NATIVE_OK
+	EN	Native DSD is available for this player.
+	ZH	此播放器可用原生 DSD。
+
+PLUGIN_SACDPLAYER_NATIVE_UNAVAILABLE
+	EN	Native DSD is unavailable (player must report dff, and the helper must support it).
+	ZH	原生 DSD 不可用（播放器需上报 dff，且 helper 需支持）。
+
+PLUGIN_SACDPLAYER_DOP_OK
+	EN	DoP is available for this player.
+	ZH	此播放器可用 DoP。
+
+PLUGIN_SACDPLAYER_DOP_UNAVAILABLE
+	EN	DoP is unavailable (player must support raw PCM, and the helper must support DoP).
+	ZH	DoP 不可用（播放器需支持 raw PCM，且 helper 需支持 DoP）。
+
+PLUGIN_SACDPLAYER_PCM_DESC
+	EN	Target sample rate and FLAC compression for DSD to PCM conversion.
+	ZH	DSD 转 PCM 的目标采样率与 FLAC 压缩级别。
+
+PLUGIN_SACDPLAYER_FLAC_COMP
+	EN	FLAC compression level
+	ZH	FLAC 压缩级别
+
+PLUGIN_SACDPLAYER_DOP_DESC
+	EN	DoP rate limit and resampler. DoP uses raw 24-bit PCM, not FLAC.
+	ZH	DoP 倍率上限与重采样器。DoP 使用 24-bit 原始 PCM，不经过 FLAC。
+
+PLUGIN_SACDPLAYER_RESAMPLER
+	EN	Resampler
+	ZH	重采样器
+
+PLUGIN_SACDPLAYER_FORMATS
+	EN	Player formats
+	ZH	播放器格式

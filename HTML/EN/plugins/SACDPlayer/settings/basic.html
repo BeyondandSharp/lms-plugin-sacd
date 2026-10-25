@@ -1,0 +1,36 @@
+[% PROCESS settings/header.html %]
+
+[% WRAPPER settingSection %]
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_SETTINGS" desc="PLUGIN_SACDPLAYER_SETTINGS_DESC" %]
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_STATUS" | string %]</div>
+    <table class="prefTable">
+      <tr><td>FFmpeg</td><td>[% IF status.ffmpeg %][% status.ffmpeg_bin || "ffmpeg" | html %][% ELSE %]<span class="red">[% "PLUGIN_SACDPLAYER_MISSING" | string %]</span>[% END %]</td></tr>
+      <tr><td>sacd_dsd</td><td>[% IF status.helper %][% status.helper_bin || "sacd_dsd" | html %][% ELSE %]<span class="red">[% "PLUGIN_SACDPLAYER_MISSING" | string %]</span>[% END %]</td></tr>
+      <tr><td>Native DSD</td><td>[% IF status.native %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
+      <tr><td>DoP</td><td>[% IF status.dop %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
+      <tr><td>DST native</td><td>[% IF status.dst_native %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
+    </table>
+  [% END %]
+
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_PATHS" desc="PLUGIN_SACDPLAYER_PATHS_DESC" %]
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_FFMPEG" | string %]</div>
+    <input type="text" class="stdedit" name="pref_ffmpeg" value="[% prefs.ffmpeg | html %]" size="60" />
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_FFPROBE" | string %]</div>
+    <input type="text" class="stdedit" name="pref_ffprobe" value="[% prefs.ffprobe | html %]" size="60" />
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_HELPER" | string %]</div>
+    <input type="text" class="stdedit" name="pref_helper" value="[% prefs.helper | html %]" size="60" />
+  [% END %]
+
+  [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_TAGS" desc="PLUGIN_SACDPLAYER_TAGS_DESC" %]
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_TAG_FALLBACK" | string %]</div>
+    <select class="stdedit" name="pref_tag_fallback">
+      [% FOREACH opt IN [ ['auto','PLUGIN_SACDPLAYER_AUTO'], ['ffprobe','ffprobe'], ['off','PLUGIN_SACDPLAYER_OFF'] ] %]
+        <option value="[% opt.0 %]"[% IF prefs.tag_fallback == opt.0 %] selected[% END %]>[% opt.1 | string %]</option>
+      [% END %]
+    </select>
+    <div class="prefDesc">[% "PLUGIN_SACDPLAYER_MAX_TAG" | string %]</div>
+    <input type="text" class="stdedit" name="pref_max_tag_size_mb" value="[% prefs.max_tag_size_mb | html %]" size="6" />
+  [% END %]
+[% END %]
+
+[% PROCESS settings/footer.html %]
