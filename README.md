@@ -24,7 +24,8 @@ DST header parsing and a bounded tag reader.
 - `Audio::Scan >= 0.94` (shipped with LMS 9.0+).
 - For native DSD/DoP: build the small `sacd_dsd` helper in `helper/src`.
 - DST native/DoP uses the vendored **libdstdec** decoder, so it does **not**
-  require a special FFmpeg build. libdstdec handles SACD DST (DSD64).
+  require a special FFmpeg build. libdstdec handles DST at DSD64, DSD128 and
+DSD256.
 
 ## Install
 
@@ -88,7 +89,9 @@ modes.
 - **SACD ISO (`.iso`) is not supported.** It needs a virtual-track or
   extraction-cache design; see the project plan for the proposed phase 2.
 - Native/DoP DST decoding uses the vendored **libdstdec** and currently
-  supports **DSD64 DST** (the SACD format). Higher-rate DST falls back to PCM.
+  supports **DSD64, DSD128 and DSD256 DST** (DSD64 is the SACD format).
+  DSD256 uses the same 75 fps frame layout and libdstdec's 18816-byte frame
+  limit; it has not been tested against a real DSD256 DST sample yet.
   See `THIRD_PARTY_NOTICES.md` for license/source details.
 - Native DST seeking decodes from the beginning and discards; it is correct but
   not instant.
@@ -143,7 +146,7 @@ or as a read-only mount:
 
 No compiler or FFmpeg development headers are needed on the LMS host. The
 default `make dist` helper is statically linked and contains the vendored
-libdstdec decoder, so `dst_native=1` for SACD DSD64 DST.
+libdstdec decoder, so `dst_native=1` for DSD64/128/256 DST.
 
 `make install PLUGINS_DIR=/path/to/lms/Plugins` copies the same folder directly.
 `make bundle` creates a host-architecture archive; `make bundle-all` builds

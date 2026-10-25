@@ -10,7 +10,7 @@ The libdstdec source files carry their original Philips / MPEG-4 Audio
 notices.  The sacd-ripper project is distributed under GPL-2.0; see
 `helper/src/libdstdec/COPYING`.  The decoder is compiled into `sacd_dsd`.
 
-SACD DST is DSD64; the helper decodes DSD64 DST frames to raw DSD for native
+DSD64 is the SACD DST format; the helper decodes DSD64/128/256 DST frames to raw DSD for native
 DFF and DoP output.
 
 ## FFmpeg

@@ -521,25 +521,32 @@ static int copy_dop(FILE *in, FILE *out, const DsdInfo *info,
 
 #ifdef HAVE_LIBDSTDEC
 /*
- * Sequential libdstdec backend.  libdstdec is a DSD64 decoder (SACD DST);
- * each DSTF frame decodes to 4704 bytes per channel.  It is independent of
+ * Sequential libdstdec backend.  libdstdec initialises with the DSD
+ * sample-rate multiplier (64/128/256); a DSTF frame is 75 fps, so its
+ * decoded size is (fs / 600) bytes per channel.  It is independent of
  * FFmpeg and does not need AV_SAMPLE_FMT_DSD.
  */
 static int decode_dst_lib(FILE *in, FILE *out, const DsdInfo *info,
                           int dop, double start, double end,
                           uint64_t limit_bytes, uint64_t *written_out) {
-    if (info->fs != 2822400 || info->channels < 1 || info->channels > 6
+    if (info->channels < 1 || info->channels > 6
         || !info->dst_offset || !info->dst_size)
+        return 0;
+
+    int rate_mult = (int)(info->fs / 44100);
+    if (rate_mult != 64 && rate_mult != 128 && rate_mult != 256)
+        return 0;
+    if ((uint32_t)rate_mult * 44100 != info->fs)
         return 0;
 
     ebunch *D = (ebunch *)calloc(1, sizeof(*D));
     if (!D) return 0;
-    if (DST_InitDecoder(D, info->channels, 64) != 0) {
+    if (DST_InitDecoder(D, info->channels, rate_mult) != 0) {
         free(D);
         return 0;
     }
 
-    size_t frame_bytes = (size_t)4704 * (size_t)info->channels;
+    size_t frame_bytes = (size_t)(info->fs / 600) * (size_t)info->channels;
     uint8_t *frame = (uint8_t *)malloc(frame_bytes);
     if (!frame) {
         DST_CloseDecoder(D);
@@ -949,7 +956,7 @@ int main(int argc, char **argv) {
         printf("dop=1\n");
 #if defined(HAVE_LIBDSTDEC)
         printf("dst_native=1\n");
-        printf("dst_native_max_fs=64\n");
+        printf("dst_native_max_fs=256\n");
 #elif defined(HAVE_DSD_SAMPLE_FMT)
         printf("dst_native=1\n");
         printf("dst_native_max_fs=512\n");

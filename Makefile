@@ -150,7 +150,6 @@ verify-bins:
 	@qemu-arm-static Bin/arm-linux/sacd_dsd --probe
 	@qemu-i386-static Bin/i386-linux/sacd_dsd --probe
 	@WINEDEBUG=-all wine Bin/MSWin32-x64-multi-thread/sacd_dsd.exe --probe
-	@file
 	@echo "binaries verified"
 
 install: dist

@@ -22,7 +22,7 @@
 - `Audio::Scan >= 0.94`（LMS 9.0+ 自带）。
 - Native DSD/DoP 需要编译 `helper/src` 下的 `sacd_dsd`。
 - DST Native/DoP 使用内置的 **libdstdec**，不需要特殊的 FFmpeg 构建；
-  libdstdec 处理 SACD 的 DSD64 DST。
+  libdstdec 处理 DSD64、DSD128 和 DSD256 DST。
 
 ## 安装
 
@@ -106,8 +106,10 @@ SACDPlayer 会记录警告；最后加载的插件生效。SACDPlayer 额外支�
 ## 已知限制
 
 - **不支持 SACD ISO（`.iso`）**。需要虚拟曲目或解包缓存设计，属于后续阶段。
-- Native/DoP DST 使用内置 **libdstdec**，目前支持 **DSD64 DST**（SACD 格式）；
-  更高 DST 率会回退 PCM。许可证和来源见 `THIRD_PARTY_NOTICES.md`。
+- Native/DoP DST 使用内置 **libdstdec**，支持 **DSD64、DSD128 和 DSD256 DST**
+  （DSD64 是 SACD 格式）。DSD256 使用相同的 75 fps 帧结构和 libdstdec 的
+  18816 字节上限；目前还没有真实 DSD256 DST 文件实测。许可证和来源见
+  `THIRD_PARTY_NOTICES.md`。
 - Native DST 的定位会从头解码并丢弃前面的数据；结果正确，但不是瞬时定位。
 - 多声道会原样输出，但播放器/DAC 必须支持对应声道数。
 - 初始验证以 Linux 为主；Windows 构建不在初始验证范围内。
@@ -142,7 +144,7 @@ dist/SACDPlayer/
 cp -a dist/SACDPlayer /path/to/lms/Plugins/SACDPlayer
 ```
 
-默认 `make dist` 使用静态链接的 helper，并包含 libdstdec，因此 SACD DSD64
+默认 `make dist` 使用静态链接的 helper，并包含 libdstdec，因此 DSD64/128/256
 DST 的 `dst_native=1`，LMS 主机不需要编译器或 FFmpeg 开发头文件。
 
 `make install PLUGINS_DIR=/path/to/lms/Plugins` 可直接复制该目录。
