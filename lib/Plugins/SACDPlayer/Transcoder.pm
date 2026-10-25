@@ -63,13 +63,15 @@ sub helper_probe {
     my $class = shift;
     my $bin = $class->helper_bin || return {
         available => 0, native => 0, dop => 0, dst_native => 0,
+        dst_native_max_fs => 0, version => '',
     };
 
     my @st = stat($bin);
     my $key = join('|', $bin, @st[9, 7]);
     return $HELPER_CACHE{$key} if $HELPER_CACHE{$key};
 
-    my %caps = (available => 1, native => 0, dop => 0, dst_native => 0);
+    my %caps = (available => 1, native => 0, dop => 0, dst_native => 0,
+                dst_native_max_fs => 0, version => '');
     my $pid = open(my $fh, '-|', $bin, '--probe');
     if ($pid) {
         my $out = '';
@@ -152,7 +154,7 @@ sub setup {
     if ($ff) {
         my $filter = '-af aresample=resampler=' . $resampler
             . ':precision=28:osr=%d';
-        my $cmd = $ffbin . ' -nostdin -v error -i "$FILE$"'
+        my $cmd = $ffbin . ' -nostdin -v error -i $FILE$'
             . ' -map 0:a:0 -vn $START$ $END$ $RESAMPLE$'
             . ' -c:a flac -compression_level ' . $comp
             . ' -sample_fmt s32 -bits_per_raw_sample 24 -f flac -';
@@ -169,7 +171,7 @@ sub setup {
     }
 
     if ($helper) {
-        my $dop_cmd = $hbin . ' --mode dop --input "$FILE$"'
+        my $dop_cmd = $hbin . ' --mode dop --wav --input $FILE$'
             . ' $START$ $END$';
         my $dop_caps = {
             F => 'noArgs',
@@ -177,7 +179,7 @@ sub setup {
             U => 'END=--end %u',
         };
 
-        my $native_cmd = $hbin . ' --mode native --input "$FILE$"'
+        my $native_cmd = $hbin . ' --mode native --input $FILE$'
             . ' $START$ $END$';
         my $native_caps = {
             F => 'noArgs',
@@ -186,8 +188,8 @@ sub setup {
         };
 
         if ($hp->{dop}) {
-            $add{"dsf-pcm-*-$id"} = [ $dop_cmd, $dop_caps ];
-            $add{"dff-pcm-*-$id"} = [ $dop_cmd, $dop_caps ];
+            $add{"dsf-wav-*-$id"} = [ $dop_cmd, $dop_caps ];
+            $add{"dff-wav-*-$id"} = [ $dop_cmd, $dop_caps ];
         }
         if ($hp->{native}) {
             $add{"dsf-dff-*-$id"} = [ $native_cmd, $native_caps ];
@@ -197,7 +199,7 @@ sub setup {
 
     # Remove stale profiles for this client before adding the current set.
     for my $profile (keys %Slim::Player::TranscodingHelper::commandTable) {
-        next unless $profile =~ /^(?:dsf|dff)-(?:flc|pcm|dff)-.*-\Q$id\E$/;
+        next unless $profile =~ /^(?:dsf|dff)-(?:flc|wav|dff)-.*-\Q$id\E$/;
         delete $Slim::Player::TranscodingHelper::commandTable{$profile};
         delete $Slim::Player::TranscodingHelper::capabilities{$profile};
     }
@@ -223,6 +225,8 @@ sub status {
         native     => $hp->{native} ? 1 : 0,
         dop        => $hp->{dop} ? 1 : 0,
         dst_native => $hp->{dst_native} ? 1 : 0,
+        dst_native_max_fs => $hp->{dst_native_max_fs} || 0,
+        helper_version => $hp->{version} || '',
         ffmpeg_bin => $class->ffmpeg_bin,
         helper_bin => $class->helper_bin,
     };

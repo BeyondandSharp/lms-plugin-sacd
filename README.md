@@ -1,6 +1,6 @@
 # SACDPlayer for Lyrion Music Server
 
-`SACDPlayer` adds SACD-oriented DSF/DFF support to LMS 9.2+:
+`SACDPlayer` adds SACD-oriented DSF/DFF support to LMS 9.1+ (tested with 9.1.1):
 
 - scans `.dsf` and `.dff` (including DST-compressed DSDIFF),
 - reads tags/cover art from headers only, never by decoding the whole file,
@@ -14,13 +14,15 @@ DST header parsing and a bounded tag reader.
 
 ## Requirements
 
-- Lyrion Music Server **9.2+**.
+- Lyrion Music Server **9.1+** (latest stable tested: 9.1.1).
 - **FFmpeg 7.1+** for the PCM/FLAC path (the `ffmpeg` executable is enough).
-- `Audio::Scan >= 0.94` (shipped with LMS 9.2).
+  The official `lmscommunity/lyrionmusicserver` image does **not** include
+  ffmpeg; PCM mode therefore needs ffmpeg installed, while native DFF/DoP DST
+  works with the bundled helper alone.
+- `Audio::Scan >= 0.94` (shipped with LMS 9.1).
 - For native DSD/DoP: build the small `sacd_dsd` helper in `helper/src`.
-- For **native DST** output, the helper must be built against a libavcodec
-  revision that exposes `AV_SAMPLE_FMT_DSD` (new FFmpeg master/8.x-era).
-  Without it, DST still plays in PCM mode and native mode falls back to PCM.
+- DST native/DoP uses the vendored **libdstdec** decoder, so it does **not**
+  require a special FFmpeg build. libdstdec handles SACD DST (DSD64).
 
 ## Install
 
@@ -28,14 +30,13 @@ DST header parsing and a bounded tag reader.
    (or use the plugin repository ZIP).
 2. Build the helper:
    ```sh
-   sudo apt-get install build-essential pkg-config \
-        libavformat-dev libavcodec-dev libavutil-dev
+   sudo apt-get install build-essential
    make -C helper/src
    make -C helper/src install
    ```
-   This installs `Bin/x86_64-linux/sacd_dsd` (or the matching arch). If you do
-   not have FFmpeg development headers, `make` still builds a helper for
-   uncompressed DSF/DFF and DoP; only native DST is disabled.
+   This installs `Bin/x86_64-linux/sacd_dsd` (or the matching arch). The
+   helper includes libdstdec, so DST native/DoP is available without FFmpeg
+   development headers.
 3. Restart LMS. Enable the plugin under **Settings > Plugins**.
 4. Open the plugin settings to check FFmpeg/helper status, then per-player
    settings to choose the output mode.
@@ -48,11 +49,13 @@ absolute path.
 | Mode | Output | Notes |
 |---|---|---|
 | PCM | 24-bit FLAC via FFmpeg | Default. DSD64 → 352.8 kHz; higher DSD rates are reduced to at most 352.8 kHz and to a rate the player accepts. |
-| DoP | 24-bit raw PCM at DSD/16 | Bit-perfect DSD transport; DAC must support DoP. Default cap DSD128 (configurable DSD64/128/256). |
-| Native | DFF (raw DSD) via helper | Player must report `dff` (the helper emits DFF). DST requires helper `dst_native=1`; otherwise PCM fallback. |
+| DoP | 24-bit PCM WAV at DSD/16 | Bit-perfect DSD transport; DAC must support DoP. Default cap DSD128 (configurable DSD64/128/256). |
+| Native | DFF (raw DSD) via helper | Player must report `dff` (the helper emits DFF). DST requires helper `dst_native=1`; otherwise PCM fallback. Recommended for Squeezelite and for Docker installs without ffmpeg. |
 
 DoP is *not* the same as native DSD: it is DSD data carried in 24-bit PCM
-samples with the DoP marker bytes.
+samples with the DoP marker bytes. The helper wraps it in a WAV container so
+LMS/players see the correct DSD/16 sample rate even on LMS 9.1, which has no
+per-stream sample-rate hook.
 
 ## Tag reading
 
@@ -78,14 +81,67 @@ modes.
 
 ## Limitations
 
-- **SACD ISO (`.iso`) is not supported in 0.1.0.** It needs a virtual-track or
+- **SACD ISO (`.iso`) is not supported.** It needs a virtual-track or
   extraction-cache design; see the project plan for the proposed phase 2.
-- DST native output depends on the optional libavcodec raw-DSD support.
+- Native/DoP DST decoding uses the vendored **libdstdec** and currently
+  supports **DSD64 DST** (the SACD format). Higher-rate DST falls back to PCM.
+  See `THIRD_PARTY_NOTICES.md` for license/source details.
 - Native DST seeking decodes from the beginning and discards; it is correct but
   not instant.
 - Multi-channel output is passed through, but the player/DAC must support the
   channel count.
 - Windows builds are not part of the initial verification; Linux is primary.
+
+## Prebuilt / compiled folder
+
+The plugin itself is Perl (LMS loads Perl modules), but the architecture-specific
+helper is a native binary. To make a deployment folder that contains everything
+needed on the LMS host:
+
+```sh
+make dist
+```
+
+This creates:
+
+```text
+dist/SACDPlayer/
+├── install.xml
+├── lib/                 # plugin Perl modules
+├── HTML/                # settings pages
+├── strings.txt
+├── Bin/x86_64-linux/sacd_dsd   # static helper binary
+├── README.md
+├── THIRD_PARTY_NOTICES.md
+└── LICENSE
+```
+
+Copy the **whole** `SACDPlayer` folder into `<LMS>/Plugins/`:
+
+```sh
+cp -a dist/SACDPlayer /path/to/lms/Plugins/SACDPlayer
+```
+
+For the official Docker image (`lmscommunity/lyrionmusicserver`), the
+third-party plugin directory is **`/config/cache/Plugins`**, not
+`/config/Plugins`:
+
+```sh
+docker cp dist/SACDPlayer <container>:/config/cache/Plugins/SACDPlayer
+```
+
+or as a read-only mount:
+
+```sh
+-v /path/to/dist/SACDPlayer:/config/cache/Plugins/SACDPlayer:ro
+```
+
+No compiler or FFmpeg development headers are needed on the LMS host. The
+default `make dist` helper is statically linked and contains the vendored
+libdstdec decoder, so `dst_native=1` for SACD DSD64 DST.
+
+`make install PLUGINS_DIR=/path/to/lms/Plugins` copies the same folder directly.
+`make bundle` additionally creates `dist/SACDPlayer-<version>-<arch>.tar.gz`.
 
 ## Development
 

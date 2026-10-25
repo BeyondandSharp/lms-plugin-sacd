@@ -10,12 +10,19 @@ make test
 make install
 ```
 
-`pkg-config` is used to detect libavformat/libavcodec/libavutil. When they are
-available, DST decoding is enabled if the headers also provide
-`AV_SAMPLE_FMT_DSD`. When they are not available, the helper still supports:
+The helper bundles **libdstdec** under `libdstdec/` for SACD DST (DSD64)
+decoding. It is always compiled in, so DST native/DoP does not need FFmpeg
+development headers or `AV_SAMPLE_FMT_DSD`.
+
+The helper also supports:
 
 - uncompressed DSF/DFF → native DFF,
-- uncompressed DSF/DFF → DoP 24-bit PCM.
+- uncompressed DSF/DFF → DoP 24-bit PCM WAV,
+- DST (DSD64) → native DFF or DoP via libdstdec.
+
+`pkg-config`/libav is still probed as an optional future backend for
+higher-rate DST; it is not required, and the current streaming path uses
+libdstdec.
 
 ## Modes
 
@@ -23,16 +30,19 @@ available, DST decoding is enabled if the headers also provide
 sacd_dsd --probe
 sacd_dsd --selftest
 sacd_dsd --mode native --input FILE [--start SEC] [--end SEC]
-sacd_dsd --mode dop    --input FILE [--start SEC] [--end SEC]
+sacd_dsd --mode dop    --input FILE [--start SEC] [--end SEC] [--wav]
 ```
 
 - `native` writes a valid DSDIFF (`FRM8`/`PROP`/`DSD `) stream. DSF LSB-first
   bytes are reversed to DFF MSB-first.
-- `dop` writes raw interleaved 24-bit little-endian PCM. Each sample is
+- `dop` writes interleaved 24-bit little-endian PCM. Each sample is
   `marker << 16 | dsd_byte_0 << 8 | dsd_byte_1`; the marker alternates
-  `0x05`/`0xFA`.
+  `0x05`/`0xFA`. With `--wav`, a PCM WAV header is written first so the
+  DSD/16 sample rate is carried in the stream.
 - `--start/--end` are seconds. DST decoding starts at the beginning and
   discards until `--start` (DST frame-level seeking is not implemented).
+- `--probe` reports `dst_native=1` and `dst_native_max_fs=64` when libdstdec
+  is compiled in.
 
 ## License
 

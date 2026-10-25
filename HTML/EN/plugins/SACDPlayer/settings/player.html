@@ -15,9 +15,11 @@
 
   [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_PCM" desc="PLUGIN_SACDPLAYER_PCM_DESC" %]
     <select class="stdedit" name="pref_pcm_rate">
-      [% FOREACH opt IN [ ['auto','PLUGIN_SACDPLAYER_AUTO'], ['352800','352.8 kHz'], ['176400','176.4 kHz'], ['88200','88.2 kHz'], ['44100','44.1 kHz'] ] %]
-        <option value="[% opt.0 %]"[% IF prefs.pcm_rate == opt.0 %] selected[% END %]>[% opt.1 | string %]</option>
-      [% END %]
+      <option value="auto"[% IF prefs.pcm_rate == 'auto' %] selected[% END %]>[% "PLUGIN_SACDPLAYER_AUTO" | string %]</option>
+      <option value="352800"[% IF prefs.pcm_rate == '352800' %] selected[% END %]>352.8 kHz</option>
+      <option value="176400"[% IF prefs.pcm_rate == '176400' %] selected[% END %]>176.4 kHz</option>
+      <option value="88200"[% IF prefs.pcm_rate == '88200' %] selected[% END %]>88.2 kHz</option>
+      <option value="44100"[% IF prefs.pcm_rate == '44100' %] selected[% END %]>44.1 kHz</option>
     </select>
     <div class="prefDesc">[% "PLUGIN_SACDPLAYER_FLAC_COMP" | string %]</div>
     <select class="stdedit" name="pref_flac_compression">

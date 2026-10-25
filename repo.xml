@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <repo>
   <title>SACDPlayer</title>
-  <plugin name="SACDPlayer" version="0.1.0" minTarget="9.2.0" maxTarget="9.*">
+  <plugin name="SACDPlayer" version="0.2.7" minTarget="9.1.0" maxTarget="9.*">
     <title>PLUGIN_SACDPLAYER</title>
     <desc>PLUGIN_SACDPLAYER_DESC</desc>
-    <url>https://github.com/LMS-Community/plugin-SACDPlayer/releases/download/v0.1.0/SACDPlayer-0.1.0.zip</url>
+    <url>https://github.com/LMS-Community/plugin-SACDPlayer/releases/download/v0.2.0/SACDPlayer-0.2.7.zip</url>
   </plugin>
 </repo>

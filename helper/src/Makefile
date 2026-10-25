@@ -3,10 +3,20 @@ CFLAGS  ?= -O2 -Wall -Wextra -std=c11
 CPPFLAGS ?=
 LDLIBS  ?= -lm
 
-BIN     := sacd_dsd
-SRC     := sacd_dsd.c
+BIN      := sacd_dsd
+SRC      := sacd_dsd.c
+DST_SRC  := $(wildcard libdstdec/*.c)
 
 HAVE_LIBAV := $(shell pkg-config --exists libavformat libavcodec libavutil 2>/dev/null && echo 1 || echo 0)
+
+# Set NO_LIBAV=1 for a portable helper that has no shared-library dependency
+# on libav.  STATIC=1 produces a self-contained Linux binary (libc/libm).
+ifeq ($(NO_LIBAV),1)
+HAVE_LIBAV := 0
+endif
+ifeq ($(STATIC),1)
+LDFLAGS += -static
+endif
 
 ifeq ($(HAVE_LIBAV),1)
 # AV_SAMPLE_FMT_DSD is a new enum value, not a preprocessor macro.  Probe it
@@ -38,8 +48,9 @@ endif
 .PHONY: all clean install test
 all: $(BIN)
 
-$(BIN): $(SRC)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -o $@ $< $(LDFLAGS) $(LDLIBS)
+$(BIN): $(SRC) $(DST_SRC) $(wildcard libdstdec/*.h)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -D_FILE_OFFSET_BITS=64 -DHAVE_LIBDSTDEC \
+		-Ilibdstdec -o $@ $(SRC) $(DST_SRC) $(LDFLAGS) $(LDLIBS)
 
 test: $(BIN)
 	./$(BIN) --selftest

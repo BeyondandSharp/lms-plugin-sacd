@@ -6,6 +6,7 @@
     <table class="prefTable">
       <tr><td>FFmpeg</td><td>[% IF status.ffmpeg %][% status.ffmpeg_bin || "ffmpeg" | html %][% ELSE %]<span class="red">[% "PLUGIN_SACDPLAYER_MISSING" | string %]</span>[% END %]</td></tr>
       <tr><td>sacd_dsd</td><td>[% IF status.helper %][% status.helper_bin || "sacd_dsd" | html %][% ELSE %]<span class="red">[% "PLUGIN_SACDPLAYER_MISSING" | string %]</span>[% END %]</td></tr>
+      <tr><td>Helper version</td><td>[% status.helper_version || "unknown" | html %]</td></tr>
       <tr><td>Native DSD</td><td>[% IF status.native %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
       <tr><td>DoP</td><td>[% IF status.dop %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
       <tr><td>DST native</td><td>[% IF status.dst_native %][% "PLUGIN_SACDPLAYER_YES" | string %][% ELSE %][% "PLUGIN_SACDPLAYER_NO" | string %][% END %]</td></tr>
@@ -24,9 +25,9 @@
   [% WRAPPER settingGroup title="PLUGIN_SACDPLAYER_TAGS" desc="PLUGIN_SACDPLAYER_TAGS_DESC" %]
     <div class="prefDesc">[% "PLUGIN_SACDPLAYER_TAG_FALLBACK" | string %]</div>
     <select class="stdedit" name="pref_tag_fallback">
-      [% FOREACH opt IN [ ['auto','PLUGIN_SACDPLAYER_AUTO'], ['ffprobe','ffprobe'], ['off','PLUGIN_SACDPLAYER_OFF'] ] %]
-        <option value="[% opt.0 %]"[% IF prefs.tag_fallback == opt.0 %] selected[% END %]>[% opt.1 | string %]</option>
-      [% END %]
+      <option value="auto"[% IF prefs.tag_fallback == 'auto' %] selected[% END %]>[% "PLUGIN_SACDPLAYER_AUTO" | string %]</option>
+      <option value="ffprobe"[% IF prefs.tag_fallback == 'ffprobe' %] selected[% END %]>ffprobe</option>
+      <option value="off"[% IF prefs.tag_fallback == 'off' %] selected[% END %]>[% "PLUGIN_SACDPLAYER_OFF" | string %]</option>
     </select>
     <div class="prefDesc">[% "PLUGIN_SACDPLAYER_MAX_TAG" | string %]</div>
     <input type="text" class="stdedit" name="pref_max_tag_size_mb" value="[% prefs.max_tag_size_mb | html %]" size="6" />

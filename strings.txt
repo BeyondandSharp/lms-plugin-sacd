@@ -107,8 +107,8 @@ PLUGIN_SACDPLAYER_DOP_OK
 	ZH	此播放器可用 DoP。
 
 PLUGIN_SACDPLAYER_DOP_UNAVAILABLE
-	EN	DoP is unavailable (player must support raw PCM, and the helper must support DoP).
-	ZH	DoP 不可用（播放器需支持 raw PCM，且 helper 需支持 DoP）。
+	EN	DoP is unavailable (player must support WAV/PCM, and the helper must support DoP).
+	ZH	DoP 不可用（播放器需支持 WAV/PCM，且 helper 需支持 DoP）。
 
 PLUGIN_SACDPLAYER_PCM_DESC
 	EN	Target sample rate and FLAC compression for DSD to PCM conversion.
@@ -119,8 +119,8 @@ PLUGIN_SACDPLAYER_FLAC_COMP
 	ZH	FLAC 压缩级别
 
 PLUGIN_SACDPLAYER_DOP_DESC
-	EN	DoP rate limit and resampler. DoP uses raw 24-bit PCM, not FLAC.
-	ZH	DoP 倍率上限与重采样器。DoP 使用 24-bit 原始 PCM，不经过 FLAC。
+	EN	DoP rate limit and resampler. DoP uses 24-bit PCM in a WAV container.
+	ZH	DoP 倍率上限与重采样器。DoP 使用 24-bit PCM（WAV 容器）。
 
 PLUGIN_SACDPLAYER_RESAMPLER
 	EN	Resampler

@@ -91,7 +91,7 @@ sub _sacd_sample_and_bitrate {
     return undef unless $transcoder && ref $transcoder eq 'HASH';
 
     my $profile = $transcoder->{profile} || '';
-    return undef unless $profile =~ /^(?:dsf|dff)-(?:flc|pcm|dff)-/;
+    return undef unless $profile =~ /^(?:dsf|dff)-(?:flc|wav|dff)-/;
 
     my $track = eval { $self->currentTrack } || eval { $self->track } || $self;
     return undef unless $track;
@@ -113,7 +113,7 @@ sub _sacd_sample_and_bitrate {
         };
     }
 
-    if ($format eq 'pcm' && $cmd =~ /--mode\s+dop/) {
+    if ($format eq 'wav' && $cmd =~ /--mode\s+dop/) {
         my $rate = $fs ? int($fs / 16) : 0;
         return {
             sampleRate => $rate,

@@ -23,6 +23,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#ifdef HAVE_LIBDSTDEC
+#include "libdstdec/dst_init.h"
+#include "libdstdec/dst_fram.h"
+#include "libdstdec/types.h"
+#endif
+
 #ifdef HAVE_LIBAV
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -41,6 +47,7 @@ typedef struct {
     int have_end;
     int probe;
     int selftest;
+    int wav;
 } Options;
 
 typedef struct {
@@ -53,6 +60,8 @@ typedef struct {
     uint64_t raw_bytes;     /* decoded DSD bytes, interleaved */
     uint64_t dst_frames;
     uint32_t dst_rate;
+    uint64_t dst_offset;
+    uint64_t dst_size;
     double duration;
     int lsb_first;
     uint64_t file_size;
@@ -251,6 +260,8 @@ static int parse_dff(FILE *f, DsdInfo *info) {
         }
         else if (memcmp(h, "DST ", 4) == 0) {
             info->is_dst = 1;
+            info->dst_offset = dpos;
+            info->dst_size   = csize;
             parse_dst(f, dpos, csize, info);
             have_audio = 1;
         }
@@ -350,8 +361,11 @@ static int write_dff_header(FILE *out, const DsdInfo *info, uint64_t data_bytes)
 
     uint64_t chnl_data  = 2 + 4 * (uint64_t)ch;
     uint64_t chnl_total = 12 + chnl_data + (chnl_data & 1);
-    uint64_t cmpr_data  = 4 + 1 + 14; /* "DSD " + count + "not compressed" */
-    uint64_t cmpr_total = 12 + cmpr_data + (cmpr_data & 1);
+    /* The 14-byte "not compressed" name leaves an odd payload; DSDIFF's
+     * chunk data size includes the pad byte (as standard DFF writers do).
+     * Squeezelite's DFF parser relies on that alignment. */
+    uint64_t cmpr_data  = 4 + 1 + 14 + 1; /* 20 */
+    uint64_t cmpr_total = 12 + cmpr_data;
     uint64_t lsco_total = 14;
     uint64_t prop_data  = 4 + 16 + chnl_total + cmpr_total + lsco_total;
     uint64_t prop_total = 12 + prop_data;
@@ -385,7 +399,7 @@ static int write_dff_header(FILE *out, const DsdInfo *info, uint64_t data_bytes)
         fwrite(&n, 1, 1, out);
     }
     fwrite("not compressed", 1, 14, out);
-    if (cmpr_data & 1) fputc(0, out);
+    fputc(0, out);
 
     write_chunk_header(out, "LSCO", 2);
     {
@@ -452,6 +466,7 @@ static int copy_native(FILE *in, FILE *out, const DsdInfo *info,
             for (size_t i = 0; i < got; ++i) buf[i] = reverse_table[buf[i]];
         }
         if (fwrite(buf, 1, got, out) != got) return 0;
+        fflush(out);
         remaining -= got;
     }
     if (remaining > 0) {
@@ -483,10 +498,124 @@ static int copy_dop(FILE *in, FILE *out, const DsdInfo *info,
         got -= got % ((size_t)info->channels * 2);
         if (!write_dop(out, buf, got / (size_t)info->channels,
                        info->channels, &marker, info->lsb_first)) return 0;
+        fflush(out);
         remaining -= got;
     }
     return !ferror(out);
 }
+
+#ifdef HAVE_LIBDSTDEC
+/*
+ * Sequential libdstdec backend.  libdstdec is a DSD64 decoder (SACD DST);
+ * each DSTF frame decodes to 4704 bytes per channel.  It is independent of
+ * FFmpeg and does not need AV_SAMPLE_FMT_DSD.
+ */
+static int decode_dst_lib(FILE *in, FILE *out, const DsdInfo *info,
+                          int dop, double start, double end,
+                          uint64_t limit_bytes, uint64_t *written_out) {
+    if (info->fs != 2822400 || info->channels < 1 || info->channels > 6
+        || !info->dst_offset || !info->dst_size)
+        return 0;
+
+    ebunch *D = (ebunch *)calloc(1, sizeof(*D));
+    if (!D) return 0;
+    if (DST_InitDecoder(D, info->channels, 64) != 0) {
+        free(D);
+        return 0;
+    }
+
+    size_t frame_bytes = (size_t)4704 * (size_t)info->channels;
+    uint8_t *frame = (uint8_t *)malloc(frame_bytes);
+    if (!frame) {
+        DST_CloseDecoder(D);
+        free(D);
+        return 0;
+    }
+
+    double s = start > 0 ? start : 0.0;
+    double e = end > 0 ? end : info->duration;
+    if (e < s) e = s;
+    uint64_t first_frame = (uint64_t)floor(s * 75.0);
+    uint64_t end_frame   = (uint64_t)ceil(e * 75.0);
+    if (!end_frame) end_frame = UINT64_MAX;
+
+    uint64_t pos = info->dst_offset;
+    uint64_t endpos = info->dst_offset + info->dst_size;
+    uint64_t frame_no = 0;
+    uint64_t written = 0;
+    int marker = 0;
+    int ok = 0;
+    int saw_frame = 0;
+    int decode_error = 0;
+
+    while (pos + 12 <= endpos) {
+        uint8_t h[12];
+        if (!seek_to(in, pos) || !read_exact(in, h, 12)) break;
+        uint64_t csize = rd_u64be(h + 4);
+        uint64_t dpos = pos + 12;
+        if (dpos + csize > endpos + 1) break;
+
+        if (memcmp(h, "DSTF", 4) == 0 && csize > 0 && csize <= 1024 * 1024) {
+            saw_frame = 1;
+            uint8_t *comp = (uint8_t *)malloc((size_t)csize);
+            if (!comp) break;
+            if (!seek_to(in, dpos) || !read_exact(in, comp, (size_t)csize)) {
+                free(comp);
+                break;
+            }
+            int err = DST_FramDSTDecode(comp, frame, (int)csize,
+                                        (int)frame_no, D);
+            free(comp);
+            if (err != DSTErr_NoError) {
+                /* A broken frame is fatal for a bit-perfect DSD stream. */
+                decode_error = 1;
+                break;
+            }
+
+            if (frame_no >= first_frame && frame_no < end_frame) {
+                size_t out_bytes = frame_bytes;
+                if (dop) out_bytes -= out_bytes % ((size_t)info->channels * 2);
+                if (limit_bytes) {
+                    if (written >= limit_bytes) {
+                        out_bytes = 0;
+                    }
+                    else if (written + out_bytes > limit_bytes) {
+                        out_bytes = (size_t)(limit_bytes - written);
+                        if (dop) out_bytes -= out_bytes % ((size_t)info->channels * 2);
+                        out_bytes -= out_bytes % (size_t)info->channels;
+                    }
+                }
+                if (out_bytes) {
+                    if (dop) {
+                        if (!write_dop(out, frame,
+                                       out_bytes / (size_t)info->channels,
+                                       info->channels, &marker, 0)) break;
+                    }
+                    else if (fwrite(frame, 1, out_bytes, out) != out_bytes) {
+                        break;
+                    }
+                    fflush(out);
+                    written += out_bytes;
+                }
+            }
+            frame_no++;
+            if (limit_bytes && written >= limit_bytes) { ok = 1; break; }
+        }
+
+        pos = dpos + csize + (csize & 1);
+    }
+
+    if (!decode_error) {
+        if (!limit_bytes && saw_frame) ok = 1;
+        if (limit_bytes && written >= limit_bytes) ok = 1;
+    }
+    DST_CloseDecoder(D);
+    free(frame);
+    free(D);
+    *written_out = written;
+    return ok;
+}
+#endif
 
 #ifdef HAVE_LIBAV
 static int write_raw(FILE *out, const uint8_t *data, size_t bytes) {
@@ -583,6 +712,7 @@ static int decode_dst(FILE *out, const char *path, const DsdInfo *info,
                         goto fail;
                     }
                 }
+                fflush(out);
                 written += total;
             }
             av_frame_unref(frame);
@@ -621,6 +751,7 @@ static int decode_dst(FILE *out, const char *path, const DsdInfo *info,
                 av_frame_unref(frame);
                 goto fail;
             }
+            fflush(out);
             written += total;
         }
         av_frame_unref(frame);
@@ -643,10 +774,46 @@ fail:
 }
 #endif
 
+static void write_u16le(FILE *f, uint16_t v) {
+    uint8_t b[2] = { (uint8_t)v, (uint8_t)(v >> 8) };
+    fwrite(b, 1, 2, f);
+}
+
+static void write_u32le(FILE *f, uint32_t v) {
+    uint8_t b[4] = { (uint8_t)v, (uint8_t)(v >> 8), (uint8_t)(v >> 16), (uint8_t)(v >> 24) };
+    fwrite(b, 1, 4, f);
+}
+
+/* Write a streaming-friendly PCM WAV header for DoP.  DoP data is 3 bytes
+ * per channel per output frame, so the WAV size is derived from the raw DSD
+ * byte count. */
+static int write_dop_wav_header(FILE *out, const DsdInfo *info,
+                                uint64_t raw_bytes) {
+    uint32_t channels = (uint32_t)info->channels;
+    uint32_t rate = info->fs / 16;
+    uint64_t samples = raw_bytes / ((uint64_t)channels * 2);
+    uint64_t data_bytes = samples * (uint64_t)channels * 3;
+    if (!channels || !rate || data_bytes > 0xFFFFFFFFull - 36) return 0;
+
+    fwrite("RIFF", 1, 4, out);
+    write_u32le(out, (uint32_t)(36 + data_bytes));
+    fwrite("WAVEfmt ", 1, 8, out);
+    write_u32le(out, 16);
+    write_u16le(out, 1);                         /* PCM */
+    write_u16le(out, (uint16_t)channels);
+    write_u32le(out, rate);
+    write_u32le(out, rate * channels * 3);
+    write_u16le(out, (uint16_t)(channels * 3));
+    write_u16le(out, 24);
+    fwrite("data", 1, 4, out);
+    write_u32le(out, (uint32_t)data_bytes);
+    return !ferror(out);
+}
+
 static void usage(void) {
     fprintf(stderr,
         "usage: sacd_dsd --probe\n"
-        "       sacd_dsd --mode native|dop --input FILE [--start SEC] [--end SEC]\n"
+        "       sacd_dsd --mode native|dop --input FILE [--start SEC] [--end SEC] [--wav]\n"
         "       sacd_dsd --selftest\n");
 }
 
@@ -676,6 +843,45 @@ static int selftest(void) {
         fprintf(stderr, "selftest: unexpected DoP bytes\n");
         return 1;
     }
+
+    /* DFF CMPR must advertise 20 bytes (including the pad).  Squeezelite's
+     * DSDIFF parser advances by the advertised size and would otherwise
+     * misread the following LSCO/DSD chunk. */
+    DsdInfo info;
+    memset(&info, 0, sizeof(info));
+    info.fs = 2822400;
+    info.channels = 2;
+    f = tmpfile();
+    if (!f) { fprintf(stderr, "selftest: tmpfile failed\n"); return 1; }
+    if (!write_dff_header(f, &info, 4704 * 2)) {
+        fclose(f);
+        fprintf(stderr, "selftest: DFF header failed\n");
+        return 1;
+    }
+    fflush(f);
+    rewind(f);
+    uint8_t hdr[256];
+    size_t hlen = fread(hdr, 1, sizeof(hdr), f);
+    fclose(f);
+    int found = 0;
+    for (size_t i = 0; i + 12 <= hlen; ++i) {
+        if (!memcmp(hdr + i, "CMPR", 4)) {
+            uint64_t sz = 0;
+            for (int j = 0; j < 8; ++j) sz = (sz << 8) | hdr[i + 4 + j];
+            if (sz != 20) {
+                fprintf(stderr, "selftest: CMPR size is %llu, expected 20\n",
+                        (unsigned long long)sz);
+                return 1;
+            }
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        fprintf(stderr, "selftest: CMPR chunk missing\n");
+        return 1;
+    }
+
     printf("selftest=ok\n");
     return 0;
 }
@@ -689,6 +895,7 @@ int main(int argc, char **argv) {
         const char *a = argv[i];
         if (!strcmp(a, "--probe")) o.probe = 1;
         else if (!strcmp(a, "--selftest")) o.selftest = 1;
+        else if (!strcmp(a, "--wav")) o.wav = 1;
         else if (!strcmp(a, "--mode") && i + 1 < argc) o.mode = argv[++i];
         else if (!strncmp(a, "--mode=", 7)) o.mode = a + 7;
         else if (!strcmp(a, "--input") && i + 1 < argc) o.input = argv[++i];
@@ -713,17 +920,22 @@ int main(int argc, char **argv) {
     }
 
     signal(SIGPIPE, SIG_IGN);
-    setvbuf(stdout, NULL, _IOFBF, 1 << 20);
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     if (o.selftest) return selftest();
     if (o.probe) {
-        printf("version=0.1.0\n");
+        printf("version=0.2.7\n");
         printf("native=1\n");
         printf("dop=1\n");
-#ifdef HAVE_DSD_SAMPLE_FMT
+#if defined(HAVE_LIBDSTDEC)
         printf("dst_native=1\n");
+        printf("dst_native_max_fs=64\n");
+#elif defined(HAVE_DSD_SAMPLE_FMT)
+        printf("dst_native=1\n");
+        printf("dst_native_max_fs=512\n");
 #else
         printf("dst_native=0\n");
+        printf("dst_native_max_fs=0\n");
 #endif
         return 0;
     }
@@ -752,6 +964,10 @@ int main(int argc, char **argv) {
     }
 
     int dop = !strcmp(o.mode, "dop");
+    if (o.wav && !dop) {
+        fprintf(stderr, "sacd_dsd: --wav is only valid with --mode dop\n");
+        return 2;
+    }
     if (info.is_dst && o.have_start) {
         /* DST starts are handled by decoding and discarding below. */
     }
@@ -763,10 +979,14 @@ int main(int argc, char **argv) {
     }
 
     if (info.is_dst) {
-#ifdef HAVE_LIBAV
+#if defined(HAVE_LIBDSTDEC) || defined(HAVE_LIBAV)
         uint64_t data_bytes = bytes_for_seconds(&info, start, end);
         if (dop) {
             data_bytes -= data_bytes % ((uint64_t)info.channels * 2);
+            if (o.wav && !write_dop_wav_header(stdout, &info, data_bytes)) {
+                fclose(in);
+                return 4;
+            }
         }
         else {
             if (!write_dff_header(stdout, &info, data_bytes)) {
@@ -775,8 +995,15 @@ int main(int argc, char **argv) {
             }
         }
         uint64_t written = 0;
-        if (!decode_dst(stdout, o.input, &info, dop, start,
-                        data_bytes, &written)) {
+        int decoded;
+#if defined(HAVE_LIBDSTDEC)
+        decoded = decode_dst_lib(in, stdout, &info, dop, start, end,
+                                 data_bytes, &written);
+#else
+        decoded = decode_dst(stdout, o.input, &info, dop, start,
+                             data_bytes, &written);
+#endif
+        if (!decoded) {
             fclose(in);
             return 4;
         }
@@ -815,6 +1042,10 @@ int main(int argc, char **argv) {
         if (dop) {
             start_bytes -= start_bytes % 2;
             data_bytes -= data_bytes % ((uint64_t)info.channels * 2);
+            if (o.wav && !write_dop_wav_header(stdout, &info, data_bytes)) {
+                fclose(in);
+                return 4;
+            }
             if (!copy_dop(in, stdout, &info, start_bytes, data_bytes)) {
                 fclose(in);
                 return 4;

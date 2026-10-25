@@ -97,16 +97,44 @@ sub has_format {
     return scalar grep { $_ eq $fmt } @formats;
 }
 
+sub _dst_decode_ok {
+    my ($class, $track, $hp) = @_;
+    return 1 unless $hp;
+    return 0 unless $hp->{dst_native};
+
+    my $tags = $class->tags_for($track);
+    my $fs = $tags && $tags->{RATE} ? $tags->{RATE} : 0;
+    my $max_fs = $hp->{dst_native_max_fs} || 64;
+    return 0 if $fs && $fs > $max_fs * 44100;
+    return 1;
+}
+
+sub _helper_streaming_ok {
+    my ($class, $hp) = @_;
+    return 0 unless $hp && $hp->{available};
+    # 0.2.6 added unbuffered output and fixed DFF CMPR alignment; older
+    # helpers return EOF to LMS before the first chunk and cannot play.
+    my $v = $hp->{version} || '';
+    my @v = split /\./, $v;
+    return 0 unless @v >= 3;
+    my ($major, $minor, $patch) = map { $_ + 0 } @v[0 .. 2];
+    return 1 if $major > 0;
+    return 0 if $minor < 2;
+    return 0 if $minor == 2 && $patch < 6;
+    return 1;
+}
+
 sub native_ok {
     my ($class, $track, $client) = @_;
     return 0 unless $track && $client;
     return 0 unless $class->has_format($client, 'dff');
     my $hp = Plugins::SACDPlayer::Transcoder->helper_probe;
     return 0 unless $hp->{available} && $hp->{native};
+    return 0 unless $class->_helper_streaming_ok($hp);
 
     my $tags = $class->tags_for($track);
     if ($tags && $tags->{_sacd} && $tags->{_sacd}{is_dst}) {
-        return $hp->{dst_native} ? 1 : 0;
+        return $class->_dst_decode_ok($track, $hp);
     }
     return 1;
 }
@@ -114,13 +142,17 @@ sub native_ok {
 sub dop_ok {
     my ($class, $track, $client) = @_;
     return 0 unless $track && $client;
-    return 0 unless $class->has_format($client, 'pcm');
+    return 0 unless $class->has_format($client, 'wav');
     my $hp = Plugins::SACDPlayer::Transcoder->helper_probe;
     return 0 unless $hp->{available} && $hp->{dop};
+    return 0 unless $class->_helper_streaming_ok($hp);
 
     my $tags = $class->tags_for($track);
     my $fs = $tags && $tags->{RATE} ? $tags->{RATE} : 0;
     return 0 unless $fs;
+    if ($tags->{_sacd} && $tags->{_sacd}{is_dst}) {
+        return 0 unless $class->_dst_decode_ok($track, $hp);
+    }
 
     my $cp = $class->prefs_for($client);
     my $max_fs = $cp->get('dop_max_fs') || 128;
@@ -177,7 +209,7 @@ sub pcm_target {
 sub output_format {
     my ($class, $mode) = @_;
     return 'dff' if $mode eq 'native';
-    return 'pcm' if $mode eq 'dop';
+    return 'wav' if $mode eq 'dop';
     return 'flc';
 }
 

@@ -75,7 +75,7 @@ sub handler {
     $params->{capabilities} = {
         pcm      => $fp->{available} ? 1 : 0,
         native   => ($formats{dff} && $hp->{native}) ? 1 : 0,
-        dop      => ($formats{pcm} && $hp->{dop}) ? 1 : 0,
+        dop      => ($formats{wav} && $hp->{dop}) ? 1 : 0,
         dst      => $hp->{dst_native} ? 1 : 0,
         max_rate => $max,
         formats  => join(',', @formats),

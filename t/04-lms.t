@@ -48,6 +48,15 @@ my $track = bless {
 sub FakeTrack::url { $_[0]{url} }
 sub FakeTrack::content_type { $_[0]{content_type} }
 
+my $dst_fixture = write_dff("$dir/test-dst.dff",
+    dst => 1, frames => 75,
+    id3 => id3_v23({ TIT2 => 'DST', TPE1 => 'Artist' }),
+);
+my $dst_track = bless {
+    url => 'file://' . $dst_fixture,
+    content_type => 'dff',
+}, 'FakeTrack';
+
 my $song = bless { track => $track, client => $client }, 'Slim::Player::Song';
 sub Slim::Player::Song::currentTrack { $_[0]{track} }
 sub Slim::Player::Song::master { $_[0]{client} }
@@ -55,7 +64,11 @@ sub Slim::Player::Song::master { $_[0]{client} }
 Plugins::SACDPlayer::Transcoder->setup($client);
 ok(exists $Slim::Player::TranscodingHelper::commandTable{"dsf-flc-*-aa:bb:cc:dd:ee:ff"}, 'PCM profile registered');
 ok(exists $Slim::Player::TranscodingHelper::commandTable{"dff-dff-*-aa:bb:cc:dd:ee:ff"}, 'native profile registered');
-ok(exists $Slim::Player::TranscodingHelper::commandTable{"dff-pcm-*-aa:bb:cc:dd:ee:ff"}, 'DoP profile registered');
+ok(exists $Slim::Player::TranscodingHelper::commandTable{"dff-wav-*-aa:bb:cc:dd:ee:ff"}, 'DoP profile registered');
+like($Slim::Player::TranscodingHelper::commandTable{"dff-dff-*-aa:bb:cc:dd:ee:ff"}, qr/--input \$FILE\$/, 'native uses tokenizer quoting');
+unlike($Slim::Player::TranscodingHelper::commandTable{"dff-dff-*-aa:bb:cc:dd:ee:ff"}, qr/"\$FILE\$"/, 'native does not double-quote FILE');
+like($Slim::Player::TranscodingHelper::commandTable{"dff-wav-*-aa:bb:cc:dd:ee:ff"}, qr/--input \$FILE\$/, 'DoP uses tokenizer quoting');
+like($Slim::Player::TranscodingHelper::commandTable{"dff-flc-*-aa:bb:cc:dd:ee:ff"}, qr/-i \$FILE\$/, 'ffmpeg uses tokenizer quoting');
 
 Plugins::SACDPlayer::Hooks->install;
 $p->client($client)->set('output_mode', 'native');
@@ -74,13 +87,20 @@ is($hook->{sampleSize}, 1, 'native sample size');
 $p->client($client)->set('output_mode', 'dop');
 is(Plugins::SACDPlayer::Route->select_mode($track, $client), 'dop', 'DoP selected');
 $hook = Slim::Player::Song::handleSampleAndBitrate($song, {
-    profile => 'dff-pcm-*-x', streamformat => 'pcm', command => 'x --mode dop',
+    profile => 'dff-wav-*-x', streamformat => 'wav', command => 'x --mode dop --wav',
 });
 is($hook->{sampleRate}, 176400, 'DoP sample rate');
 is($hook->{sampleSize}, 24, 'DoP sample size');
 
 $p->client($client)->set('output_mode', 'pcm');
 is(Plugins::SACDPlayer::Route->select_mode($track, $client), 'pcm', 'PCM selected');
+
+# The static release helper includes libdstdec, so DSD64 DST is native-capable.
+$p->client($client)->set('output_mode', 'native');
+is(Plugins::SACDPlayer::Route->select_mode($dst_track, $client), 'native',
+    'DST native selected through libdstdec');
+
+$p->client($client)->set('output_mode', 'pcm');
 is(Slim::Player::CapabilitiesHelper::samplerateLimit($song), 176400, 'PCM target rate');
 
 done_testing;
