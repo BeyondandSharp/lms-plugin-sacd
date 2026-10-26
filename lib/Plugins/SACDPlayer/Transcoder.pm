@@ -13,6 +13,13 @@ my $log   = logger('plugin.sacdplayer');
 my %FFMPEG_CACHE;
 my %HELPER_CACHE;
 
+# Raw PCM formats this plugin can decode DSD/DST to.  Containers and lossy
+# codecs are deliberately not listed: final AAC/Ogg/Opus encoding belongs to
+# CodecSwitch/FFmpeg, this plugin is a decode-only provider.
+my %PCM_SAMPLE_FMT = map { $_ => 1 } qw(s16le s24le);
+my %PCM_CODEC = (s16le => 'pcm_s16le', s24le => 'pcm_s24le');
+my %PCM_DEFAULT = (sample_fmt => 's16le', rate => 44100, channels => 2);
+
 sub prefs { $prefs }
 
 sub _which {
@@ -126,6 +133,104 @@ sub ffmpeg_probe {
     return \%caps;
 }
 
+sub _client_prefs {
+    my ($class, $client) = @_;
+    return $client ? $prefs->client($client) : $prefs;
+}
+
+sub _flac_compression {
+    my ($class, $client) = @_;
+    my $comp = $class->_client_prefs($client)->get('flac_compression');
+    return 0 unless defined $comp && $comp =~ /^\d+$/;
+    return $comp;
+}
+
+sub _resampler_name {
+    my ($class, $client) = @_;
+    my $fp = $class->ffmpeg_probe;
+    my $rpref = $class->_client_prefs($client)->get('resampler') || 'auto';
+    my $resampler = $rpref eq 'auto' ? ($fp->{soxr} ? 'soxr' : 'swr') : $rpref;
+    $resampler = 'swr' if $resampler eq 'soxr' && !$fp->{soxr};
+    $resampler = 'swr' unless $resampler =~ /^(?:soxr|swr)$/;
+    return $resampler;
+}
+
+# LMS capability hashref shared by the FLAC and raw PCM decode commands:
+# F=file input, T=start, U=end, D=downsample (the $RESAMPLE$ token).
+sub _base_capabilities {
+    my ($class, $resampler) = @_;
+    return {
+        F => 'noArgs',
+        T => 'START=-ss %s',
+        U => 'END=-t %w',
+        D => 'RESAMPLE=-af aresample=resampler=' . $resampler
+            . ':precision=28:osr=%d',
+    };
+}
+
+sub _flac_plan {
+    my ($class, $client) = @_;
+    my $ff = $class->ffmpeg_bin || return undef;
+    my $comp      = $class->_flac_compression($client);
+    my $resampler = $class->_resampler_name($client);
+
+    my $command = _bin_token($ff) . ' -nostdin -v error -i $FILE$'
+        . ' -map 0:a:0 -vn $START$ $END$ $RESAMPLE$'
+        . ' -c:a flac -compression_level ' . $comp
+        . ' -sample_fmt s32 -bits_per_raw_sample 24 -f flac -';
+
+    return {
+        command      => $command,
+        capabilities => $class->_base_capabilities($resampler),
+    };
+}
+
+sub _pcm_opts {
+    my ($class, $opts) = @_;
+    my %out = %PCM_DEFAULT;
+    if (ref $opts eq 'HASH') {
+        for my $key (keys %PCM_DEFAULT) {
+            my $value = $opts->{$key};
+            next unless defined $value && !ref $value && length "$value";
+            $out{$key} = lc "$value" if $key eq 'sample_fmt';
+            $out{$key} = $value      if $key ne 'sample_fmt';
+        }
+    }
+
+    return undef unless $PCM_SAMPLE_FMT{ $out{sample_fmt} };
+    return undef unless "$out{rate}" =~ /^\d+$/
+        && $out{rate} >= 8000 && $out{rate} <= 1536000;
+    return undef unless "$out{channels}" =~ /^\d+$/
+        && $out{channels} >= 1 && $out{channels} <= 8;
+
+    $out{rate}     = int $out{rate};
+    $out{channels} = int $out{channels};
+    return \%out;
+}
+
+sub _pcm_plan {
+    my ($class, $client, $opts) = @_;
+    my $ff = $class->ffmpeg_bin || return undef;
+    my $pcm = $class->_pcm_opts($opts) || return undef;
+    my $resampler = $class->_resampler_name($client);
+    my $fmt = $pcm->{sample_fmt};
+
+    # Raw little-endian PCM on stdout, no container: the consumer (LMS or a
+    # CodecSwitch encoder) receives exactly the declared format.
+    my $command = _bin_token($ff) . ' -nostdin -v error -i $FILE$'
+        . ' -map 0:a:0 -vn $START$ $END$ $RESAMPLE$'
+        . ' -c:a ' . $PCM_CODEC{$fmt}
+        . ' -ar ' . $pcm->{rate}
+        . ' -ac ' . $pcm->{channels}
+        . ' -f ' . $fmt . ' -';
+
+    return {
+        command      => $command,
+        capabilities => $class->_base_capabilities($resampler),
+        pcm          => $pcm,
+    };
+}
+
 sub setup {
     my ($class, $client) = @_;
     return unless $client;
@@ -133,41 +238,17 @@ sub setup {
     my $id = $client->id || $client->macaddress || '';
     return unless length $id;
 
-    my $ff     = $class->ffmpeg_bin;
     my $helper = $class->helper_bin;
     my $hp     = $class->helper_probe;
-    my $fp     = $class->ffmpeg_probe;
 
-    my $cprefs = $prefs->client($client);
-    my $comp   = $cprefs->get('flac_compression');
-    $comp = 0 unless defined $comp && $comp =~ /^\d+$/;
-    my $rpref = $cprefs->get('resampler') || 'auto';
-    my $resampler = $rpref eq 'auto' ? ($fp->{soxr} ? 'soxr' : 'swr') : $rpref;
-    $resampler = 'swr' if $resampler eq 'soxr' && !$fp->{soxr};
-    $resampler = 'swr' unless $resampler =~ /^(?:soxr|swr)$/;
-
-    my $ffbin = _bin_token($ff || 'ffmpeg');
     my $hbin  = _bin_token($helper || 'sacd_dsd');
 
     my %add;
 
-    if ($ff) {
-        my $filter = '-af aresample=resampler=' . $resampler
-            . ':precision=28:osr=%d';
-        my $cmd = $ffbin . ' -nostdin -v error -i $FILE$'
-            . ' -map 0:a:0 -vn $START$ $END$ $RESAMPLE$'
-            . ' -c:a flac -compression_level ' . $comp
-            . ' -sample_fmt s32 -bits_per_raw_sample 24 -f flac -';
-
-        my $caps = {
-            F => 'noArgs',
-            T => 'START=-ss %s',
-            U => 'END=-t %w',
-            D => 'RESAMPLE=' . $filter,
-        };
-
-        $add{"dsf-flc-*-$id"} = [ $cmd, $caps ];
-        $add{"dff-flc-*-$id"} = [ $cmd, $caps ];
+    my $flac = $class->_flac_plan($client);
+    if ($flac) {
+        $add{"dsf-flc-*-$id"} = [ $flac->{command}, $flac->{capabilities} ];
+        $add{"dff-flc-*-$id"} = [ $flac->{command}, $flac->{capabilities} ];
     }
 
     if ($helper) {
@@ -212,6 +293,65 @@ sub setup {
 
     $log->debug("SACD profiles for $id: " . join(', ', sort keys %add));
     return 1;
+}
+
+# Optional capability declaration for an orchestration layer (CodecSwitch).
+# This plugin only decodes DSD/DST: it never declares an encoder.
+sub codec_capabilities {
+    my ($class, $client) = @_;
+    return {
+        provider => 'sacd',
+        priority => 50,
+        decode   => [
+            {
+                from  => [qw(dff dsf)],
+                to    => ['flc'],
+                scope => ['local'],
+            },
+            {
+                from  => [qw(dff dsf)],
+                to    => ['pcm'],
+                scope => ['local'],
+                pcm   => { sample_fmt => 's16le', rate => 44100, channels => 2 },
+            },
+        ],
+        encode => [],
+    };
+}
+
+# decode_plan($client, $format, $opts) -> { command, capabilities, format }
+#
+# $format is 'flc' (lossless FLAC) or 'pcm' (raw little-endian PCM).  The
+# command is an LMS profile-style command using $FILE$/$START$/$END$/$RESAMPLE$
+# and capabilities is an LMS capability hashref, so an orchestration layer can
+# append an encoder and register the composed profile.  Any other format
+# (including aac/ogg/ops) returns undef: lossy targets are owned by
+# CodecSwitch/FFmpeg.
+sub decode_plan {
+    my ($class, $client, $format, $opts) = @_;
+    return undef unless defined $format && !ref $format;
+
+    $format = lc $format;
+    $format =~ s/^\s+|\s+$//g;
+    $format = 'flc' if $format eq 'flac';
+
+    my $plan;
+    if ($format eq 'flc') {
+        $plan = $class->_flac_plan($client);
+    }
+    elsif ($format eq 'pcm') {
+        $plan = $class->_pcm_plan($client, $opts);
+    }
+    else {
+        return undef;
+    }
+    return undef unless $plan;
+
+    return {
+        command      => $plan->{command},
+        capabilities => $plan->{capabilities},
+        format       => $format,
+    };
 }
 
 sub status {

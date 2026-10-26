@@ -84,6 +84,51 @@ marker。helper 使用 WAV 容器，让 LMS/播放器在 LMS 9.0/9.1 这种没�
 > 注意：Squeezelite 的 HELO 通常只列出 `aif,pcm` 等格式，不一定报告
 > `wav`，因此它的 DoP 选项可能显示为不可用；这种情况请使用 Native DSD。
 
+`SACDPlayer` 只负责**解码**：把 DSD/DST 转成无损 FLAC 或裸 PCM，从不定义
+最终的 AAC/Ogg Vorbis/Opus 有损 profile。需要这类目标格式时，由
+`CodecSwitch` 组合管线（`DSD -> FLAC/PCM -> 目标格式`），再由 `FFmpeg`
+完成编码。
+
+## 解码能力接口（CodecSwitch / FFmpeg 集成）
+
+编排层可以通过两个可选方法获取本插件的解码能力和可直接使用的解码命令。
+未安装 CodecSwitch 时调用这两个方法也是安全的，并且不会影响独立播放：
+
+- `Plugins::SACDPlayer::Transcoder->codec_capabilities($client)` 返回：
+
+  ```perl
+  {
+      provider => 'sacd',
+      priority => 50,
+      decode   => [
+          { from => [qw(dff dsf)], to => ['flc'], scope => ['local'] },
+          { from => [qw(dff dsf)], to => ['pcm'], scope => ['local'],
+            pcm  => { sample_fmt => 's16le', rate => 44100, channels => 2 } },
+      ],
+      encode   => [],
+  }
+  ```
+
+- `Plugins::SACDPlayer::Transcoder->decode_plan($client, $format, $opts)`
+  返回 `{ command, capabilities, format }`；当格式不是 DSD 解码目标
+  （例如 `aac`、`ogg`、`ops`）时返回 `undef`。
+  - `$format = 'flc'`：复用 FFmpeg 的 FLAC 输出命令（`-f flac -`）。
+  - `$format = 'pcm'`：输出无容器的裸 little-endian PCM。
+    `$opts` 支持 `sample_fmt`（`s16le` 或 `s24le`，默认 `s16le`）、
+    `rate`（默认 `44100`）和 `channels`（默认 `2`）。
+  - `command` 是 LMS profile 风格命令，包含 `$FILE$`、`$START$`、`$END$`、
+    `$RESAMPLE$` 占位符；`capabilities` 是 LMS capability hashref
+    （`F`、`T`、`U`、`D`）。
+
+示例：
+
+```perl
+my $plan = Plugins::SACDPlayer::Transcoder->decode_plan(
+    $client, 'pcm', { sample_fmt => 's16le', rate => 48000, channels => 2 },
+);
+my $command = $plan->{command} . ' | ' . $encoder_command;
+```
+
 ## 标签读取
 
 - **DSF**：`Audio::Scan` 读取 80 字节文件头并定位 ID3；不可用时插件

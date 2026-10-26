@@ -90,6 +90,11 @@ sub _sacd_sample_and_bitrate {
     my ($self, $transcoder) = @_;
     return undef unless $transcoder && ref $transcoder eq 'HASH';
 
+    # A chained profile (SACD decode followed by a CodecSwitch encoder) reports
+    # the final target format: the intermediate FLAC/PCM stream is not what the
+    # player receives, so its sample rate/bitrate must not be advertised.
+    return undef if $transcoder->{post_format} || $transcoder->{codecswitch_chain};
+
     my $profile = $transcoder->{profile} || '';
     return undef unless $profile =~ /^(?:dsf|dff)-(?:flc|wav|dff)-/;
 

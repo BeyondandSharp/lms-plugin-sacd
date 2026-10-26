@@ -62,6 +62,53 @@ samples with the DoP marker bytes. The helper wraps it in a WAV container so
 LMS/players see the correct DSD/16 sample rate even on LMS 9.0/9.1, which have no
 per-stream sample-rate hook.
 
+`SACDPlayer` is a **decode-only** plugin: it turns DSD/DST into lossless FLAC
+or raw PCM and never defines a final lossy profile (AAC/Ogg Vorbis/Opus). When
+a lossy target is requested, `CodecSwitch` composes the pipeline
+(`DSD -> FLAC/PCM -> target`) and `FFmpeg` performs the encoder step.
+
+## Decode provider (CodecSwitch / FFmpeg integration)
+
+An orchestration layer can ask `SACDPlayer` for its decode capabilities and for
+a ready-to-use decode command through two optional methods. Both are safe to
+call when CodecSwitch is not installed, and neither changes standalone
+playback:
+
+- `Plugins::SACDPlayer::Transcoder->codec_capabilities($client)` returns
+
+  ```perl
+  {
+      provider => 'sacd',
+      priority => 50,
+      decode   => [
+          { from => [qw(dff dsf)], to => ['flc'], scope => ['local'] },
+          { from => [qw(dff dsf)], to => ['pcm'], scope => ['local'],
+            pcm  => { sample_fmt => 's16le', rate => 44100, channels => 2 } },
+      ],
+      encode   => [],
+  }
+  ```
+
+- `Plugins::SACDPlayer::Transcoder->decode_plan($client, $format, $opts)`
+  returns `{ command, capabilities, format }`, or `undef` when the requested
+  format is not a DSD decode target (for example `aac`, `ogg`, `ops`).
+  - `$format = 'flc'` reuses the FFmpeg FLAC output command (`-f flac -`).
+  - `$format = 'pcm'` returns raw little-endian PCM with no container.
+    `$opts` accepts `sample_fmt` (`s16le` or `s24le`, default `s16le`),
+    `rate` (default `44100`) and `channels` (default `2`).
+  - `command` is an LMS profile-style command using the `$FILE$`, `$START$`,
+    `$END$` and `$RESAMPLE$` placeholders; `capabilities` is an LMS capability
+    hashref (`F`, `T`, `U`, `D`).
+
+Example:
+
+```perl
+my $plan = Plugins::SACDPlayer::Transcoder->decode_plan(
+    $client, 'pcm', { sample_fmt => 's16le', rate => 48000, channels => 2 },
+);
+my $command = $plan->{command} . ' | ' . $encoder_command;
+```
+
 ## Tag reading
 
 - **DSF**: `Audio::Scan` reads the 80-byte header and seeks to the ID3 block.
