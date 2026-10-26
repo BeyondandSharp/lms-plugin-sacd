@@ -29,8 +29,8 @@ DSD256.
 
 ## Install
 
-1. Use the packaged `dist/SACDPlayer` folder (or the release ZIP/tarball) and
-   copy it to `Plugins/SACDPlayer` under the LMS installation. The source tree
+1. Use the packaged `dist/SACD` folder (or the release ZIP/tarball) and
+   copy it to `Plugins/SACD` under the LMS installation. The source tree
    contains `install.xml.in` only; it is not directly installable before
    `make dist`.
 2. Build the helper:
@@ -159,7 +159,7 @@ make dist
 This creates:
 
 ```text
-dist/SACDPlayer/
+dist/SACD/
 ├── install.xml
 ├── lib/                 # plugin Perl modules
 ├── HTML/                # settings pages
@@ -171,10 +171,12 @@ dist/SACDPlayer/
 └── LICENSE
 ```
 
-Copy the **whole** `SACDPlayer` folder into `<LMS>/Plugins/`:
+Copy the **whole** `SACD` folder into `<LMS>/Plugins/`. The package folder is
+`SACD`; the Perl module keeps its historical name `Plugins::SACDPlayer`, which
+LMS reads from `install.xml`:
 
 ```sh
-cp -a dist/SACDPlayer /path/to/lms/Plugins/SACDPlayer
+cp -a dist/SACD /path/to/lms/Plugins/SACD
 ```
 
 For the official Docker image (`lmscommunity/lyrionmusicserver`), the
@@ -182,13 +184,13 @@ third-party plugin directory is **`/config/cache/Plugins`**, not
 `/config/Plugins`:
 
 ```sh
-docker cp dist/SACDPlayer <container>:/config/cache/Plugins/SACDPlayer
+docker cp dist/SACD <container>:/config/cache/Plugins/SACD
 ```
 
 or as a read-only mount:
 
 ```sh
--v /path/to/dist/SACDPlayer:/config/cache/Plugins/SACDPlayer:ro
+-v /path/to/dist/SACD:/config/cache/Plugins/SACD:ro
 ```
 
 No compiler or FFmpeg development headers are needed on the LMS host. The
@@ -197,7 +199,7 @@ libdstdec decoder, so `dst_native=1` for DSD64/128/256 DST.
 
 `make install PLUGINS_DIR=/path/to/lms/Plugins` copies the same folder directly.
 `make bundle` creates a host-architecture archive; `make bundle-all` builds
-all supported Linux architectures and creates `dist/SACDPlayer-<version>-all.tar.gz`.
+all supported Linux architectures and creates `dist/SACD-<version>-all.tar.gz`.
 
 ### Supported helper architectures
 
@@ -250,14 +252,14 @@ prove -l -It/lib t
 make -C helper/src test
 ```
 
-The plugin modules live under `lib/Plugins/SACDPlayer/`; the helper source is
+The plugin modules live under `lib/Plugins/SACD/`; the helper source is
 under `helper/src/`.
 
 Key files:
 
-- `lib/Plugins/SACDPlayer/TagReader.pm` – bounded metadata reader.
-- `lib/Plugins/SACDPlayer/DFFParser.pm` – DSDIFF/DFF chunk walker (DST aware).
-- `lib/Plugins/SACDPlayer/ID3.pm` – minimal ID3v2 parser/cover reader.
-- `lib/Plugins/SACDPlayer/Transcoder.pm` – LMS command profiles.
-- `lib/Plugins/SACDPlayer/Hooks.pm` – sampling-rate and format-selection hooks.
+- `lib/Plugins/SACD/TagReader.pm` – bounded metadata reader.
+- `lib/Plugins/SACD/DFFParser.pm` – DSDIFF/DFF chunk walker (DST aware).
+- `lib/Plugins/SACD/ID3.pm` – minimal ID3v2 parser/cover reader.
+- `lib/Plugins/SACD/Transcoder.pm` – LMS command profiles.
+- `lib/Plugins/SACD/Hooks.pm` – sampling-rate and format-selection hooks.
 - `helper/src/sacd_dsd.c` – DoP packer and DFF writer.

@@ -43,7 +43,7 @@ my ($repo_version) = $repo =~ m{<plugin\b[^>]*\bversion="([^"]+)"};
 is($repo_version, $version, 'rendered repo.xml version matches VERSION');
 
 my ($url) = $repo =~ m{<url>\s*([^<]+?)\s*</url>};
-like($url, qr{/v\Q$version\E/SACDPlayer-\Q$version\E\.zip$},
+like($url, qr{/v\Q$version\E/SACD-\Q$version\E\.zip$},
     'rendered repo.xml URL points at the matching release asset');
 
 done_testing;

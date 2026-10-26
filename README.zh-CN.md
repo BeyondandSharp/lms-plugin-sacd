@@ -26,8 +26,8 @@
 
 ## 安装
 
-1. 使用打包后的 `dist/SACDPlayer` 目录（或 release ZIP/tar.gz），复制到
-   LMS 的 `Plugins/SACDPlayer`。源码树里只有 `install.xml.in`，必须先
+1. 使用打包后的 `dist/SACD` 目录（或 release ZIP/tar.gz），复制到
+   LMS 的 `Plugins/SACD`。源码树里只有 `install.xml.in`，必须先
    `make dist` 才能直接安装。
 2. 编译 helper：
    ```sh
@@ -53,13 +53,13 @@ helper 也可以放到 `PATH`；插件设置页支持填写绝对路径。
 不是 `/config/Plugins`。可以复制：
 
 ```sh
-docker cp dist/SACDPlayer <容器>:/config/cache/Plugins/SACDPlayer
+docker cp dist/SACD <容器>:/config/cache/Plugins/SACD
 ```
 
 或只读挂载：
 
 ```sh
--v /path/to/dist/SACDPlayer:/config/cache/Plugins/SACDPlayer:ro
+-v /path/to/dist/SACD:/config/cache/Plugins/SACD:ro
 ```
 
 修改插件后建议同时删除缓存并重启：
@@ -171,7 +171,7 @@ make dist
 生成：
 
 ```text
-dist/SACDPlayer/
+dist/SACD/
 ├── install.xml
 ├── lib/                 # 插件 Perl 模块
 ├── HTML/                # 设置页面
@@ -183,10 +183,10 @@ dist/SACDPlayer/
 └── LICENSE
 ```
 
-把整个 `SACDPlayer` 目录复制到 LMS：
+把整个 `SACD` 目录复制到 LMS。安装目录名是 `SACD`；Perl 模块仍保留历史名称 `Plugins::SACDPlayer`，LMS 会从 `install.xml` 读取该模块：
 
 ```sh
-cp -a dist/SACDPlayer /path/to/lms/Plugins/SACDPlayer
+cp -a dist/SACD /path/to/lms/Plugins/SACD
 ```
 
 默认 `make dist` 使用静态链接的 helper，并包含 libdstdec，因此 DSD64/128/256
@@ -194,7 +194,7 @@ DST 的 `dst_native=1`，LMS 主机不需要编译器或 FFmpeg 开发头文件�
 
 `make install PLUGINS_DIR=/path/to/lms/Plugins` 可直接复制该目录。
 `make bundle` 生成当前架构的包；`make bundle-all` 会构建全部支持的 Linux
-架构并生成 `dist/SACDPlayer-<version>-all.tar.gz`。
+架构并生成 `dist/SACD-<version>-all.tar.gz`。
 
 ### 支持的 helper 架构
 
@@ -260,15 +260,15 @@ prove -l -It/lib t
 make -C helper/src test
 ```
 
-插件模块在 `lib/Plugins/SACDPlayer/`，helper 在 `helper/src/`。
+插件模块在 `lib/Plugins/SACD/`，helper 在 `helper/src/`。
 
 主要文件：
 
-- `lib/Plugins/SACDPlayer/TagReader.pm` – 有界元数据读取。
-- `lib/Plugins/SACDPlayer/DFFParser.pm` – DSDIFF/DFF 块解析（支持 DST）。
-- `lib/Plugins/SACDPlayer/ID3.pm` – 精简 ID3v2/封面解析。
-- `lib/Plugins/SACDPlayer/Transcoder.pm` – LMS 转码命令配置。
-- `lib/Plugins/SACDPlayer/Hooks.pm` – 采样率和格式选择 hook。
+- `lib/Plugins/SACD/TagReader.pm` – 有界元数据读取。
+- `lib/Plugins/SACD/DFFParser.pm` – DSDIFF/DFF 块解析（支持 DST）。
+- `lib/Plugins/SACD/ID3.pm` – 精简 ID3v2/封面解析。
+- `lib/Plugins/SACD/Transcoder.pm` – LMS 转码命令配置。
+- `lib/Plugins/SACD/Hooks.pm` – 采样率和格式选择 hook。
 - `helper/src/sacd_dsd.c` – DoP 打包器和 DFF 写入器。
 
 ## 许可证

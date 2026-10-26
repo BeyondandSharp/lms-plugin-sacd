@@ -2,7 +2,7 @@
 #
 #   make            build helper for this host (normal development build)
 #   make test       run Perl unit tests and helper selftest
-#   make dist       create dist/SACDPlayer/ with a portable helper binary
+#   make dist       create dist/SACD/ with a portable helper binary
 #   make install PLUGINS_DIR=/path/to/lms/Plugins
 #
 # `make dist` deliberately builds a static helper with the vendored libdstdec
@@ -22,7 +22,7 @@ BINARCH := $(ARCH)-linux
 endif
 
 BUILD_DIR  := build
-DIST       := dist/SACDPlayer
+DIST       := dist/SACD
 HELPER_BIN := helper/src/sacd_dsd
 NO_LIBAV   ?= 1
 STATIC     ?= 1
@@ -115,7 +115,7 @@ dist: render-version helper-dist
 	chmod 755 $(DIST)/Bin/*/sacd_dsd $(DIST)/Bin/*/sacd_dsd.exe 2>/dev/null || true
 	@echo
 	@echo "Release folder: $(DIST)"
-	@echo "Copy it to <LMS>/Plugins/SACDPlayer, then restart LMS."
+	@echo "Copy it to <LMS>/Plugins/SACD, then restart LMS."
 	@echo "Helper:"; $(DIST)/Bin/$(BINARCH)/sacd_dsd --probe
 
 dist-all: bins render-version
@@ -128,12 +128,12 @@ dist-all: bins render-version
 	chmod 755 $(DIST)/Bin/*/sacd_dsd $(DIST)/Bin/*/sacd_dsd.exe 2>/dev/null || true
 
 bundle: dist
-	tar -C dist -czf dist/SACDPlayer-$(VERSION)-$(BINARCH).tar.gz SACDPlayer
-	@echo "Archive: dist/SACDPlayer-$(VERSION)-$(BINARCH).tar.gz"
+	tar -C dist -czf dist/SACD-$(VERSION)-$(BINARCH).tar.gz SACD
+	@echo "Archive: dist/SACD-$(VERSION)-$(BINARCH).tar.gz"
 
 bundle-all: dist-all
-	tar -C dist -czf dist/SACDPlayer-$(VERSION)-all.tar.gz SACDPlayer
-	@echo "Archive: dist/SACDPlayer-$(VERSION)-all.tar.gz"
+	tar -C dist -czf dist/SACD-$(VERSION)-all.tar.gz SACD
+	@echo "Archive: dist/SACD-$(VERSION)-all.tar.gz"
 
 verify-dist:
 	@test -f $(DIST)/install.xml || (echo "missing dist; run make dist" >&2; exit 1)

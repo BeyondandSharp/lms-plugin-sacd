@@ -3,10 +3,10 @@ use warnings;
 use Test::More;
 use FindBin qw($Bin);
 
-# The user-visible plugin name is "SACD".  The module, install folder,
+# The user-visible and packaged plugin name is "SACD".  The Perl module,
 # settings URL and preferences namespace intentionally keep the historical
-# "SACDPlayer"/"plugin.sacdplayer" identifiers so existing installs and
-# settings keep working.
+# "SACDPlayer"/"plugin.sacdplayer" identifiers so existing settings and
+# module references keep working.
 
 my $root = "$Bin/..";
 
@@ -63,7 +63,7 @@ like($install, qr{<creator>SACD contributors</creator>}, 'creator uses the SACD 
 
 my $repo = slurp('repo.xml.in');
 like($repo, qr{<title>SACD</title>}, 'catalog title uses SACD');
-like($repo, qr{<plugin name="SACDPlayer"}, 'catalog plugin name SACDPlayer unchanged');
+like($repo, qr{<plugin name="SACD"}, 'catalog plugin name SACD');
 
 # --- compatibility identifiers that must not be renamed --------------------
 
@@ -73,10 +73,10 @@ like(slurp('lib/Plugins/SACDPlayer/PlayerSettings.pm'),
 like(slurp('lib/Plugins/SACDPlayer/Plugin.pm'),
     qr{logger\('plugin\.sacdplayer'\)},
     'prefs/log namespace plugin.sacdplayer unchanged');
-like(slurp('Makefile'), qr{^DIST\s*:=\s*dist/SACDPlayer$}m,
-    'install folder dist/SACDPlayer unchanged');
-like(slurp('tools/sync-version.pl'), qr/SACDPlayer-\$version\.zip/,
-    'release asset SACDPlayer-<version>.zip unchanged');
+like(slurp('Makefile'), qr{^DIST\s*:=\s*dist/SACD$}m,
+    'install folder dist/SACD');
+like(slurp('tools/sync-version.pl'), qr/SACD-\$version\.zip/,
+    'release asset SACD-<version>.zip');
 ok(-d "$root/lib/Plugins/SACDPlayer", 'module directory Plugins/SACDPlayer unchanged');
 
 done_testing;

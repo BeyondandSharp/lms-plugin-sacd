@@ -47,7 +47,7 @@ mkdir $output_dir unless -d $output_dir;
 write_file("$output_dir/install.xml", $install);
 
 my $repo = read_file('repo.xml.in');
-my $url = "$release_base/$tag_prefix$version/SACDPlayer-$version.zip";
+my $url = "$release_base/$tag_prefix$version/SACD-$version.zip";
 $repo =~ s{\@VERSION\@}{$version}g;
 $repo =~ s{\@RELEASE_URL\@}{$url}g;
 die "repo.xml.in: placeholders not found\n" unless $repo =~ /version="\Q$version\E"/ && $repo =~ /\Q$url\E/;
