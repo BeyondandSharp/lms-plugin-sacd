@@ -26,6 +26,7 @@ DIST       := dist/SACD
 HELPER_BIN := helper/src/sacd_dsd
 NO_LIBAV   ?= 1
 STATIC     ?= 1
+ZIP        ?= zip
 ARCHS      ?= x86_64-linux aarch64-linux armhf-linux arm-linux i386-linux MSWin32-x64-multi-thread
 
 # Cross compilers used by `make bins`.  The x86_64 build is native; the
@@ -128,12 +129,17 @@ dist-all: bins render-version
 	chmod 755 $(DIST)/Bin/*/sacd_dsd $(DIST)/Bin/*/sacd_dsd.exe 2>/dev/null || true
 
 bundle: dist
+	@rm -f dist/SACD-$(VERSION)-$(BINARCH).tar.gz dist/SACD-$(VERSION)-$(BINARCH).zip
 	tar -C dist -czf dist/SACD-$(VERSION)-$(BINARCH).tar.gz SACD
-	@echo "Archive: dist/SACD-$(VERSION)-$(BINARCH).tar.gz"
+	@(cd dist && $(ZIP) -qr SACD-$(VERSION)-$(BINARCH).zip SACD)
+	@cp -p dist/SACD-$(VERSION)-$(BINARCH).zip dist/SACD-$(VERSION).zip
+	@echo "Archives: dist/SACD-$(VERSION)-$(BINARCH).tar.gz dist/SACD-$(VERSION)-$(BINARCH).zip dist/SACD-$(VERSION).zip"
 
 bundle-all: dist-all
+	@rm -f dist/SACD-$(VERSION)-all.tar.gz dist/SACD-$(VERSION)-all.zip
 	tar -C dist -czf dist/SACD-$(VERSION)-all.tar.gz SACD
-	@echo "Archive: dist/SACD-$(VERSION)-all.tar.gz"
+	@(cd dist && $(ZIP) -qr SACD-$(VERSION)-all.zip SACD)
+	@echo "Archives: dist/SACD-$(VERSION)-all.tar.gz dist/SACD-$(VERSION)-all.zip"
 
 verify-dist:
 	@test -f $(DIST)/install.xml || (echo "missing dist; run make dist" >&2; exit 1)
