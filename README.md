@@ -1,8 +1,8 @@
-# SACDPlayer for Lyrion Music Server
+# SACD for Lyrion Music Server
 
 [中文说明](README.zh-CN.md)
 
-`SACDPlayer` adds SACD-oriented DSF/DFF support to LMS 9.0+ (tested with 9.0.0 and 9.1.1):
+The `SACD` plugin adds SACD-oriented DSF/DFF support to LMS 9.0+ (tested with 9.0.0 and 9.1.1):
 
 - scans `.dsf` and `.dff` (including DST-compressed DSDIFF),
 - reads tags/cover art from headers only, never by decoding the whole file,
@@ -62,14 +62,14 @@ samples with the DoP marker bytes. The helper wraps it in a WAV container so
 LMS/players see the correct DSD/16 sample rate even on LMS 9.0/9.1, which have no
 per-stream sample-rate hook.
 
-`SACDPlayer` is a **decode-only** plugin: it turns DSD/DST into lossless FLAC
+The `SACD` plugin is a **decode-only** plugin: it turns DSD/DST into lossless FLAC
 or raw PCM and never defines a final lossy profile (AAC/Ogg Vorbis/Opus). When
 a lossy target is requested, `CodecSwitch` composes the pipeline
 (`DSD -> FLAC/PCM -> target`) and `FFmpeg` performs the encoder step.
 
 ## Decode provider (CodecSwitch / FFmpeg integration)
 
-An orchestration layer can ask `SACDPlayer` for its decode capabilities and for
+An orchestration layer can ask the `SACD` plugin for its decode capabilities and for
 a ready-to-use decode command through two optional methods. Both are safe to
 call when CodecSwitch is not installed, and neither changes standalone
 playback:
@@ -128,7 +128,7 @@ duration from `FRTE`; the `DSTF` payload is skipped (see `t/01-tag.t`).
 
 Both plugins replace the `dsf`/`dff` tag reader. Enable only one of them. If
 both are enabled, the plugin logs a warning; the last loaded plugin wins.
-`SACDPlayer` is the one that handles DST and provides the additional output
+The `SACD` plugin is the one that handles DST and provides the additional output
 modes.
 
 ## Limitations
@@ -226,7 +226,7 @@ committed.
 To bump everything at once:
 
 ```sh
-make bump VERSION=0.3.0
+make bump VERSION=0.3.1
 ```
 
 `make dist` / `make bundle` render `build/install.xml` and `build/repo.xml`

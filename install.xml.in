@@ -6,7 +6,7 @@
   <importmodule>Plugins::SACDPlayer::Plugin</importmodule>
   <version>@VERSION@</version>
   <description>PLUGIN_SACDPLAYER_DESC</description>
-  <creator>SACDPlayer contributors</creator>
+  <creator>SACD contributors</creator>
   <homepageURL>https://github.com/BeyondandSharp/lms-plugin-sacd</homepageURL>
   <defaultState>enabled</defaultState>
   <type>2</type>

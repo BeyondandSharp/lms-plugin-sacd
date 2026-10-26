@@ -1,14 +1,14 @@
 PLUGIN_SACDPLAYER
-	EN	SACD Player
-	ZH	SACD 播放器
+	EN	SACD
+	ZH	SACD
 
 PLUGIN_SACDPLAYER_DESC
 	EN	DSF/DFF (including DST) playback with PCM, DoP and native DSD output
 	ZH	支持 DSF/DFF（含 DST）播放，可输出 PCM、DoP 或原生 DSD
 
 PLUGIN_SACDPLAYER_SETTINGS
-	EN	SACD Player
-	ZH	SACD 播放器
+	EN	SACD
+	ZH	SACD
 
 PLUGIN_SACDPLAYER_SETTINGS_DESC
 	EN	Decoder, tag reader and output settings for SACD files.

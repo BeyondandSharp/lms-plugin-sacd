@@ -23,7 +23,7 @@ sub initPlugin {
     Plugins::SACDPlayer::Formats->install;
 
     if (eval { require Slim::Utils::PluginManager; Slim::Utils::PluginManager->isEnabled('Plugins::DSDPlayer::Plugin') }) {
-        $log->warn('SACDPlayer and DSDPlayer both override DSF/DFF tag readers; disable one of them.');
+        $log->warn('SACD and DSDPlayer both override DSF/DFF tag readers; disable one of them.');
     }
 
     unless (main::SCANNER) {

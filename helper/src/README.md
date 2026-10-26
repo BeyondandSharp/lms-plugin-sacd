@@ -1,6 +1,6 @@
 # sacd_dsd
 
-Small C helper used by the LMS SACDPlayer plugin.
+Small C helper used by the LMS SACD plugin.
 
 ## Build
 

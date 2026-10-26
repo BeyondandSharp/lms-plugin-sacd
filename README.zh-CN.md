@@ -1,8 +1,8 @@
-# SACDPlayer for Lyrion Music Server（中文说明）
+# SACD for Lyrion Music Server（中文说明）
 
 [English README](README.md)
 
-`SACDPlayer` 为 LMS 9.0+ 增加面向 SACD 的 DSF/DFF 支持（已在 9.0.0 与 9.1.1 上测试）：
+`SACD` 插件为 LMS 9.0+ 增加面向 SACD 的 DSF/DFF 支持（已在 9.0.0 与 9.1.1 上测试）：
 
 - 扫描 `.dsf` 和 `.dff`，包括 DST 压缩的 DSDIFF；
 - 只读取文件头/元数据块来获取标签和封面，不解码整个文件；
@@ -37,7 +37,7 @@
    ```
    这会生成 `Bin/x86_64-linux/sacd_dsd`（或对应架构）。helper 已包含
    libdstdec，因此 DST Native/DoP 不需要 FFmpeg 开发头文件。
-3. 重启 LMS，在 **设置 > 插件** 中启用 SACDPlayer。
+3. 重启 LMS，在 **设置 > 插件** 中启用 SACD。
 4. 打开插件设置查看 FFmpeg/helper 状态，再在播放器设置中选择输出模式。
 
 helper 也可以放到 `PATH`；插件设置页支持填写绝对路径。
@@ -84,7 +84,7 @@ marker。helper 使用 WAV 容器，让 LMS/播放器在 LMS 9.0/9.1 这种没�
 > 注意：Squeezelite 的 HELO 通常只列出 `aif,pcm` 等格式，不一定报告
 > `wav`，因此它的 DoP 选项可能显示为不可用；这种情况请使用 Native DSD。
 
-`SACDPlayer` 只负责**解码**：把 DSD/DST 转成无损 FLAC 或裸 PCM，从不定义
+`SACD` 插件只负责**解码**：把 DSD/DST 转成无损 FLAC 或裸 PCM，从不定义
 最终的 AAC/Ogg Vorbis/Opus 有损 profile。需要这类目标格式时，由
 `CodecSwitch` 组合管线（`DSD -> FLAC/PCM -> 目标格式`），再由 `FFmpeg`
 完成编码。
@@ -145,7 +145,7 @@ my $command = $plan->{command} . ' | ' . $encoder_command;
 ## 与 DSDPlayer 冲突
 
 两个插件都会替换 `dsf`/`dff` 的标签读取器。请只启用其中一个。若同时启用，
-SACDPlayer 会记录警告；最后加载的插件生效。SACDPlayer 额外支持 DST 和更多
+SACD 插件会记录警告；最后加载的插件生效。SACD 插件额外支持 DST 和更多
 输出模式。
 
 ## 已知限制
@@ -231,7 +231,7 @@ repo.xml.in      # version="@VERSION@" / @RELEASE_URL@
 发布新版本时执行：
 
 ```sh
-make bump VERSION=0.3.0
+make bump VERSION=0.3.1
 ```
 
 该命令会更新 `VERSION`，并在构建时渲染：

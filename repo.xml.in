@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- Template: rendered to build/repo.xml from VERSION by make. -->
 <repo>
-  <title>SACDPlayer</title>
+  <title>SACD</title>
   <plugin name="SACDPlayer" version="@VERSION@" minTarget="9.1.0" maxTarget="9.*">
     <title>PLUGIN_SACDPLAYER</title>
     <desc>PLUGIN_SACDPLAYER_DESC</desc>
