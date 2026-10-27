@@ -1,5 +1,7 @@
 # SACD for Lyrion Music Server（中文说明）
 
+![GitHub Release](https://img.shields.io/github/v/release/BeyondandSharp/lms-plugin-sacd)
+
 [English README](README.md)
 
 `SACD` 插件为 LMS 9.0+ 增加面向 SACD 的 DSF/DFF 支持（已在 9.0.0 与 9.1.1 上测试）：
