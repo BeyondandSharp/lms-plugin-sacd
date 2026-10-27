@@ -55,20 +55,6 @@ if [ -n "$missing_cross" ]; then
   fi
 fi
 
-case "${RELEASE_TAG:-v$version}" in
-  v*) tag_prefix=v ;;
-  *)  tag_prefix= ;;
-esac
-
-echo "[prepare] make bundle-all VERSION=$version RELEASE_TAG_PREFIX=$tag_prefix"
-make bundle-all VERSION="$version" RELEASE_TAG_PREFIX="$tag_prefix"
-
-tarball="dist/SACDPlayer-$version-all.tar.gz"
-if [ ! -f "$tarball" ]; then
-  echo "[ERROR] make bundle-all 没有产出 $tarball" >&2
-  exit 1
-fi
-
 # `zip` is not in node:22-bookworm (only `unzip` is). Install it through the
 # Action's generic installer so APT_PROXY / APK_REPO / YUM_REPO and the proxy
 # variables are honoured — do not call apt-get/yum directly here: APT_PROXY may
@@ -83,6 +69,20 @@ if ! command -v zip >/dev/null 2>&1; then
     echo "[ERROR] zip 仍未安装：请在仓库变量设 RELEASE_JOB_PACKAGES=zip（并确认镜像/代理可达）" >&2
     exit 1
   fi
+fi
+
+case "${RELEASE_TAG:-v$version}" in
+  v*) tag_prefix=v ;;
+  *)  tag_prefix= ;;
+esac
+
+echo "[prepare] make bundle-all VERSION=$version RELEASE_TAG_PREFIX=$tag_prefix"
+make bundle-all VERSION="$version" RELEASE_TAG_PREFIX="$tag_prefix"
+
+tarball="dist/SACDPlayer-$version-all.tar.gz"
+if [ ! -f "$tarball" ]; then
+  echo "[ERROR] make bundle-all 没有产出 $tarball" >&2
+  exit 1
 fi
 
 # Build the catalog ZIP from the same dist/SACDPlayer folder that went into the
