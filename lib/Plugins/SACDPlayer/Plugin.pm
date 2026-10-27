@@ -10,7 +10,12 @@ use Slim::Control::Request;
 use Plugins::SACDPlayer::Formats;
 use Plugins::SACDPlayer::Transcoder;
 
-my $log   = logger('plugin.sacdplayer');
+my $log = Slim::Utils::Log->addLogCategory({
+    category     => 'plugin.sacdplayer',
+    defaultLevel => 'ERROR',
+    description  => 'PLUGIN_SACDPLAYER',
+    logGroups    => 'TRANSCODING',
+}) || logger('plugin.sacdplayer');
 
 sub initPlugin {
     my $class = shift;
