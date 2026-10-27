@@ -1,5 +1,5 @@
 #!/bin/sh
-# SACDPlayer release prepare hook.
+# SACD release prepare hook.
 #
 # The generic `release` Action runs this file (see action-template/release/)
 # with `sh .forgejo/release/prepare.sh`, inside the checkout of the pushed tag,
@@ -17,8 +17,8 @@
 #
 # This hook is optional in general; for this repository it produces the two
 # artifacts the release ships:
-#   dist/SACDPlayer-<version>-all.tar.gz       (installable folder, all binaries)
-#   dist/SACDPlayer-<version>.zip              (what repo.xml downloads)
+#   dist/SACD-<version>-all.tar.gz             (installable folder, all binaries)
+#   dist/SACD-<version>.zip                    (what repo.xml downloads)
 set -eu
 
 : "${GITHUB_WORKSPACE:?prepare.sh: GITHUB_WORKSPACE 未设置（本 hook 需由 release Action 运行）}"
@@ -79,20 +79,20 @@ esac
 echo "[prepare] make bundle-all VERSION=$version RELEASE_TAG_PREFIX=$tag_prefix"
 make bundle-all VERSION="$version" RELEASE_TAG_PREFIX="$tag_prefix"
 
-tarball="dist/SACDPlayer-$version-all.tar.gz"
+tarball="dist/SACD-$version-all.tar.gz"
 if [ ! -f "$tarball" ]; then
   echo "[ERROR] make bundle-all 没有产出 $tarball" >&2
   exit 1
 fi
 
-# Build the catalog ZIP from the same dist/SACDPlayer folder that went into the
+# Build the catalog ZIP from the same dist/SACD folder that went into the
 # tarball, so both assets always contain identical files.
-zip_name="SACDPlayer-$version.zip"
+zip_name="SACD-$version.zip"
 zip_path="dist/$zip_name"
 rm -f "$zip_path"
 (
   cd dist
-  zip -qr "$zip_name" SACDPlayer
+  zip -qr "$zip_name" SACD
 )
 
 tarball_abs="$GITHUB_WORKSPACE/$tarball"
